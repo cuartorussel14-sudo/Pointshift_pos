@@ -1,230 +1,399 @@
-[![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://supportukrainenow.org/)
+# Zod to Json Schema
 
-![PHPMailer](https://raw.github.com/PHPMailer/PHPMailer/master/examples/images/phpmailer.png)
+[![NPM Version](https://img.shields.io/npm/v/zod-to-json-schema.svg)](https://npmjs.org/package/zod-to-json-schema)
+[![NPM Downloads](https://img.shields.io/npm/dw/zod-to-json-schema.svg)](https://npmjs.org/package/zod-to-json-schema)
 
-# PHPMailer – A full-featured email creation and transfer class for PHP
+_Looking for the exact opposite? Check out [json-schema-to-zod](https://npmjs.org/package/json-schema-to-zod)_
 
-[![Test status](https://github.com/PHPMailer/PHPMailer/workflows/Tests/badge.svg)](https://github.com/PHPMailer/PHPMailer/actions)
-[![codecov.io](https://codecov.io/gh/PHPMailer/PHPMailer/branch/master/graph/badge.svg?token=iORZpwmYmM)](https://codecov.io/gh/PHPMailer/PHPMailer)
-[![Latest Stable Version](https://poser.pugx.org/phpmailer/phpmailer/v/stable.svg)](https://packagist.org/packages/phpmailer/phpmailer)
-[![Total Downloads](https://poser.pugx.org/phpmailer/phpmailer/downloads)](https://packagist.org/packages/phpmailer/phpmailer)
-[![License](https://poser.pugx.org/phpmailer/phpmailer/license.svg)](https://packagist.org/packages/phpmailer/phpmailer)
-[![API Docs](https://github.com/phpmailer/phpmailer/workflows/Docs/badge.svg)](https://phpmailer.github.io/PHPMailer/)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PHPMailer/PHPMailer/badge)](https://api.securityscorecards.dev/projects/github.com/PHPMailer/PHPMailer)
+## Summary
 
-## Features
-- Probably the world's most popular code for sending email from PHP!
-- Used by many open-source projects: WordPress, Drupal, 1CRM, SugarCRM, Yii, Joomla! and many more
-- Integrated SMTP support – send without a local mail server
-- Send emails with multiple To, CC, BCC, and Reply-to addresses
-- Multipart/alternative emails for mail clients that do not read HTML email
-- Add attachments, including inline
-- Support for UTF-8 content and 8bit, base64, binary, and quoted-printable encodings
-- SMTP authentication with LOGIN, PLAIN, CRAM-MD5, and XOAUTH2 mechanisms over SMTPS and SMTP+STARTTLS transports
-- Validates email addresses automatically
-- Protects against header injection attacks
-- Error messages in over 50 languages!
-- DKIM and S/MIME signing support
-- Compatible with PHP 5.5 and later, including PHP 8.2
-- Namespaced to prevent name clashes
-- Much more!
+Does what it says on the tin; converts [Zod schemas](https://github.com/colinhacks/zod) into [JSON schemas](https://json-schema.org/)!
 
-## Why you might need it
-Many PHP developers need to send email from their code. The only PHP function that supports this directly is [`mail()`](https://www.php.net/manual/en/function.mail.php). However, it does not provide any assistance for making use of popular features such as encryption, authentication, HTML messages, and attachments.
+- Supports all relevant schema types, basic string, number and array length validations and string patterns.
+- Resolves recursive and recurring schemas with internal `$ref`s.
+- Supports targeting legacy Open API 3.0 specification (3.1 supports regular Json Schema).
+- Supports Open AI strict mode schemas (Optional object properties are replaced with required but nullable ones).
 
-Formatting email correctly is surprisingly difficult. There are myriad overlapping (and conflicting) standards, requiring tight adherence to horribly complicated formatting and encoding rules – the vast majority of code that you'll find online that uses the `mail()` function directly is just plain wrong, if not unsafe!
+## Sponsors
 
-The PHP `mail()` function usually sends via a local mail server, typically fronted by a `sendmail` binary on Linux, BSD, and macOS platforms, however, Windows usually doesn't include a local mail server; PHPMailer's integrated SMTP client allows email sending on all platforms without needing a local mail server. Be aware though, that the `mail()` function should be avoided when possible; it's both faster and [safer](https://exploitbox.io/paper/Pwning-PHP-Mail-Function-For-Fun-And-RCE.html) to use SMTP to localhost.
+A great big thank you to our amazing sponsors! Please consider joining them through my [GitHub Sponsors page](https://github.com/sponsors/StefanTerdell). Every cent helps, but these fellas have really gone above and beyond 💚:
 
-*Please* don't be tempted to do it yourself – if you don't use PHPMailer, there are many other excellent libraries that
-you should look at before rolling your own. Try [SwiftMailer](https://swiftmailer.symfony.com/)
-, [Laminas/Mail](https://docs.laminas.dev/laminas-mail/), [ZetaComponents](https://github.com/zetacomponents/Mail), etc.
+<table align="center" style="justify-content: center;align-items: center;display: flex;">
+  <tr>
+    <td align="center">
+      <p></p>
+      <p>
+      <div style="background-color: white; padding: 4px; padding-bottom: 8px;" alt="stainless">
+        <a href="https://www.coderabbit.ai/">
+          <picture height="45px">
+             <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/eea24edb-ff20-4532-b57c-e8719f455d6d">
+          <img alt="CodeRabbit logo" height="45px" src="https://github.com/user-attachments/assets/d791bc7d-dc60-4d55-9c31-97779839cb74">
+          </picture>
+        </a>
+      </div>
+      <br  />   
+      Cut code review time & bugs in half
+      <br/>
+      <a href="https://www.coderabbit.ai/" style="text-decoration:none;">coderabbit.ai</a>
+      </p>
+      <p></p>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <p></p>
+      <p>
+      <a href="https://retool.com/?ref=stefanterdell&utm_source=github&utm_medium=referral&utm_campaign=stefanterdell">
+        <picture height="45px">
+          <source media="(prefers-color-scheme: dark)" srcset="https://github.com/colinhacks/zod/assets/3084745/ac65013f-aeb4-48dd-a2ee-41040b69cbe6">
+          <img alt="stainless" height="45px" src="https://github.com/colinhacks/zod/assets/3084745/5ef4c11b-efeb-4495-90a8-41b83f798600">
+        </picture>
+      </a>
+      <br  />   
+      Build AI apps and workflows with <a href="https://retool.com/products/ai?ref=stefanterdell&utm_source=github&utm_medium=referral&utm_campaign=stefanterdell">Retool AI</a>
+      <br/>
+      <a href="https://retool.com/?ref=stefanterdell&utm_source=github&utm_medium=referral&utm_campaign=stefanterdell" style="text-decoration:none;">retool.com</a>
+      </p>
+      <p></p>
+    </td>
+  </tr>
+</table>
 
-## License
-This software is distributed under the [LGPL 2.1](http://www.gnu.org/licenses/lgpl-2.1.html) license, along with the [GPL Cooperation Commitment](https://gplcc.github.io/gplcc/). Please read [LICENSE](https://github.com/PHPMailer/PHPMailer/blob/master/LICENSE) for information on the software availability and distribution.
+## Usage
 
-## Installation & loading
-PHPMailer is available on [Packagist](https://packagist.org/packages/phpmailer/phpmailer) (using semantic versioning), and installation via [Composer](https://getcomposer.org) is the recommended way to install PHPMailer. Just add this line to your `composer.json` file:
+### Basic example
+
+```typescript
+import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
+
+const mySchema = z
+  .object({
+    myString: z.string().min(5),
+    myUnion: z.union([z.number(), z.boolean()]),
+  })
+  .describe("My neat object schema");
+
+const jsonSchema = zodToJsonSchema(mySchema, "mySchema");
+```
+
+#### Expected output
 
 ```json
-"phpmailer/phpmailer": "^6.8.0"
-```
-
-or run
-
-```sh
-composer require phpmailer/phpmailer
-```
-
-Note that the `vendor` folder and the `vendor/autoload.php` script are generated by Composer; they are not part of PHPMailer.
-
-If you want to use the Gmail XOAUTH2 authentication class, you will also need to add a dependency on the `league/oauth2-client` package in your `composer.json`.
-
-Alternatively, if you're not using Composer, you
-can [download PHPMailer as a zip file](https://github.com/PHPMailer/PHPMailer/archive/master.zip), (note that docs and examples are not included in the zip file), then copy the contents of the PHPMailer folder into one of the `include_path` directories specified in your PHP configuration and load each class file manually:
-
-```php
-<?php
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-require 'path/to/PHPMailer/src/Exception.php';
-require 'path/to/PHPMailer/src/PHPMailer.php';
-require 'path/to/PHPMailer/src/SMTP.php';
-```
-
-If you're not using the `SMTP` class explicitly (you're probably not), you don't need a `use` line for the SMTP class. Even if you're not using exceptions, you do still need to load the `Exception` class as it is used internally.
-
-## Legacy versions
-PHPMailer 5.2 (which is compatible with PHP 5.0 — 7.0) is no longer supported, even for security updates. You will find the latest version of 5.2 in the [5.2-stable branch](https://github.com/PHPMailer/PHPMailer/tree/5.2-stable). If you're using PHP 5.5 or later (which you should be), switch to the 6.x releases.
-
-### Upgrading from 5.2
-The biggest changes are that source files are now in the `src/` folder, and PHPMailer now declares the namespace `PHPMailer\PHPMailer`. This has several important effects – [read the upgrade guide](https://github.com/PHPMailer/PHPMailer/tree/master/UPGRADING.md) for more details.
-
-### Minimal installation
-While installing the entire package manually or with Composer is simple, convenient, and reliable, you may want to include only vital files in your project. At the very least you will need [src/PHPMailer.php](https://github.com/PHPMailer/PHPMailer/tree/master/src/PHPMailer.php). If you're using SMTP, you'll need [src/SMTP.php](https://github.com/PHPMailer/PHPMailer/tree/master/src/SMTP.php), and if you're using POP-before SMTP (*very* unlikely!), you'll need [src/POP3.php](https://github.com/PHPMailer/PHPMailer/tree/master/src/POP3.php). You can skip the [language](https://github.com/PHPMailer/PHPMailer/tree/master/language/) folder if you're not showing errors to users and can make do with English-only errors. If you're using XOAUTH2 you will need [src/OAuth.php](https://github.com/PHPMailer/PHPMailer/tree/master/src/OAuth.php) as well as the Composer dependencies for the services you wish to authenticate with. Really, it's much easier to use Composer!
-
-## A Simple Example
-
-```php
-<?php
-//Import PHPMailer classes into the global namespace
-//These must be at the top of your script, not inside a function
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
-
-//Load Composer's autoloader
-require 'vendor/autoload.php';
-
-//Create an instance; passing `true` enables exceptions
-$mail = new PHPMailer(true);
-
-try {
-    //Server settings
-    $mail->SMTPDebug = SMTP::DEBUG_SERVER;                      //Enable verbose debug output
-    $mail->isSMTP();                                            //Send using SMTP
-    $mail->Host       = 'smtp.example.com';                     //Set the SMTP server to send through
-    $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
-    $mail->Username   = 'user@example.com';                     //SMTP username
-    $mail->Password   = 'secret';                               //SMTP password
-    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
-    $mail->Port       = 465;                                    //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
-
-    //Recipients
-    $mail->setFrom('from@example.com', 'Mailer');
-    $mail->addAddress('joe@example.net', 'Joe User');     //Add a recipient
-    $mail->addAddress('ellen@example.com');               //Name is optional
-    $mail->addReplyTo('info@example.com', 'Information');
-    $mail->addCC('cc@example.com');
-    $mail->addBCC('bcc@example.com');
-
-    //Attachments
-    $mail->addAttachment('/var/tmp/file.tar.gz');         //Add attachments
-    $mail->addAttachment('/tmp/image.jpg', 'new.jpg');    //Optional name
-
-    //Content
-    $mail->isHTML(true);                                  //Set email format to HTML
-    $mail->Subject = 'Here is the subject';
-    $mail->Body    = 'This is the HTML message body <b>in bold!</b>';
-    $mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
-
-    $mail->send();
-    echo 'Message has been sent';
-} catch (Exception $e) {
-    echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/mySchema",
+  "definitions": {
+    "mySchema": {
+      "description": "My neat object schema",
+      "type": "object",
+      "properties": {
+        "myString": {
+          "type": "string",
+          "minLength": 5
+        },
+        "myUnion": {
+          "type": ["number", "boolean"]
+        }
+      },
+      "additionalProperties": false,
+      "required": ["myString", "myUnion"]
+    }
+  }
 }
 ```
 
-You'll find plenty to play with in the [examples](https://github.com/PHPMailer/PHPMailer/tree/master/examples) folder, which covers many common scenarios including sending through Gmail, building contact forms, sending to mailing lists, and more.
+## Options
 
-If you are re-using the instance (e.g. when sending to a mailing list), you may need to clear the recipient list to avoid sending duplicate messages. See [the mailing list example](https://github.com/PHPMailer/PHPMailer/blob/master/examples/mailing_list.phps) for further guidance.
+### Schema name
 
-That's it. You should now be ready to use PHPMailer!
+You can pass a string as the second parameter of the main zodToJsonSchema function. If you do, your schema will end up inside a definitions object property on the root and referenced from there. Alternatively, you can pass the name as the `name` property of the options object (see below).
 
-## Localization
-PHPMailer defaults to English, but in the [language](https://github.com/PHPMailer/PHPMailer/tree/master/language/) folder, you'll find many translations for PHPMailer error messages that you may encounter. Their filenames contain [ISO 639-1](http://en.wikipedia.org/wiki/ISO_639-1) language code for the translations, for example `fr` for French. To specify a language, you need to tell PHPMailer which one to use, like this:
+### Options object
 
-```php
-//To load the French version
-$mail->setLanguage('fr', '/optional/path/to/language/directory/');
+Instead of the schema name (or nothing), you can pass an options object as the second parameter. The following options are available:
+
+| Option                                                                             | Effect                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **name**?: _string_                                                                | As described above.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **nameStrategy**?: "ref" \| "title"                                                | Adds name as "title" meta instead of as a ref as described above                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **basePath**?: string[]                                                            | The base path of the root reference builder. Defaults to ["#"].                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **$refStrategy**?: "root" \| "relative" \| "seen" \| "none"                        | The reference builder strategy; <ul><li>**"root"** resolves $refs from the root up, ie: "#/definitions/mySchema".</li><li>**"relative"** uses [relative JSON pointers](https://tools.ietf.org/id/draft-handrews-relative-json-pointer-00.html). _See known issues!_</li><li>**"seen"** reuses the output of any "seen" Zod schema. In theory it's a more performant version of "none", but in practice this behaviour can cause issues with nested schemas and has now gotten its own option.</li> <li>**"none"** ignores referencing all together, creating a new schema branch even on "seen" schemas. Recursive references defaults to "any", ie `{}`.</li></ul> Defaults to "root". |
+| **effectStrategy**?: "input" \| "any"                                              | The effects output strategy. Defaults to "input". _See known issues!_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **dateStrategy**?: "format:date" \| "format:date-time" \| "string" \| "integer"    | Date strategy, integer allow to specify in unix-time min and max values. "format:date" creates a string schema with format: "date". "format:date-time" creates a string schema with format: "date-time". "string" is intepreted as "format:date-time". "integer" creates an integer schema with format "unix-time" (unless target "openApi3" is used min max checks are also respected)                                                                                                                                                                                                                                                                                                 |
+|                                                                                    |
+| **emailStrategy**?: "format:email" \| "format:idn-email" \| "pattern:zod"          | Choose how to handle the email string check. Defaults to "format:email".                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **base64Strategy**?: "format:binary" \| "contentEnconding:base64" \| "pattern:zod" | Choose how to handle the base64 string check. Defaults to "contentEncoding:base64" as described [here](https://json-schema.org/understanding-json-schema/reference/non_json_data#contentencoding). Note that "format:binary" is not represented in the output type as it's not part of the JSON Schema spec and only intended to be used when targeting OpenAPI 3.0. Later versions of OpenAPI support contentEncoding.                                                                                                                                                                                                                                                                 |
+| **definitionPath**?: "definitions" \| "$defs"                                      | The name of the definitions property when name is passed. Defaults to "definitions".                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **target**?: "jsonSchema7" \| "jsonSchema2019-09" \| "openApi3" \| "openAi"        | Which spec to target. Defaults to "jsonSchema7"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **strictUnions**?: boolean                                                         | Scrubs unions of any-like json schemas, like `{}` or `true`. Multiple zod types may result in these out of necessity, such as z.instanceof()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **definitions**?: Record<string, ZodSchema>                                        | See separate section below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **errorMessages**?: boolean                                                        | Include custom error messages created via chained function checks for supported zod types. See section below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **markdownDescription**?: boolean                                                  | Copies the `description` meta to `markdownDescription`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **patternStrategy**?: "escape" \| "preserve"                                       | The Zod string validations `.includes()`, `.startsWith()`, and `.endsWith()` must be converted to regex to be compatible with JSON Schema's `pattern`. For safety, all non-alphanumeric characters are `escape`d by default (consider `z.string().includes(".")`), but this can occasionally cause problems with Unicode-flagged regex parsers. Use `preserve` to prevent this escaping behaviour and preserve the exact string written, even if it results in an inaccurate regex.                                                                                                                                                                                                     |
+| **applyRegexFlags**?: boolean                                                      | JSON Schema's `pattern` doesn't support RegExp flags, but Zod's `z.string().regex()` does. When this option is true (default false), a best-effort is made to transform regexes into a flag-independent form (e.g. `/x/i => /[xX]/` ). Supported flags: `i` (basic Latin only), `m`, `s`.                                                                                                                                                                                                                                                                                                                                                                                               |
+| **pipeStrategy**?: "all" \| "input" \| "output"                                    | Decide which types should be included when using `z.pipe`, for example `z.string().pipe(z.number())` would return both `string` and `number` by default, only `string` for "input" and only `number` for "output".                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **removeAdditionalStrategy**?: "passthrough" \| "strict"                           | Decide when `additionalProperties` should be allowed. See the section on additional properties for details.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **allowedAdditionalProperties**?: `true` \| `undefined`                            | What value to give `additionalProperties` when allowed. See the section on additional properties for details.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **rejectedAdditionalProperties**?: `false` \| `undefined`                          | What value to give `additionalProperties` when rejected. See the section on additional properties for details.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **override**?: callback                                                            | See section                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **postProcess**?: callback                                                         | See section                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **openAiAnyTypeName**?: string                                                     | Decides the name of a Json schema used to allow semi-arbitrary values in Open AI structured output. If any value in the Zod-schema resolves to any "any"-type schema it will reference a definition of this name. If no such definition is provided a default Json schema will be used. Defaults to "OpenAiAnyType"                                                                                                                                                                                                                                                                                                                                                                     |
+
+### Definitions
+
+The definitions option lets you manually add recurring schemas into definitions for cleaner outputs. It's fully compatible with named schemas, changed definitions path and base path. Here's a simple example:
+
+```typescript
+const myRecurringSchema = z.string();
+const myObjectSchema = z.object({ a: myRecurringSchema, b: myRecurringSchema });
+
+const myJsonSchema = zodToJsonSchema(myObjectSchema, {
+  definitions: { myRecurringSchema },
+});
 ```
 
-We welcome corrections and new languages – if you're looking for corrections, run the [PHPMailerLangTest.php](https://github.com/PHPMailer/PHPMailer/tree/master/test/PHPMailerLangTest.php) script in the tests folder and it will show any missing translations.
+#### Result
 
-## Documentation
-Start reading at the [GitHub wiki](https://github.com/PHPMailer/PHPMailer/wiki). If you're having trouble, head for [the troubleshooting guide](https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting) as it's frequently updated.
-
-Examples of how to use PHPMailer for common scenarios can be found in the [examples](https://github.com/PHPMailer/PHPMailer/tree/master/examples) folder. If you're looking for a good starting point, we recommend you start with [the Gmail example](https://github.com/PHPMailer/PHPMailer/tree/master/examples/gmail.phps).
-
-To reduce PHPMailer's deployed code footprint, examples are not included if you load PHPMailer via Composer or via [GitHub's zip file download](https://github.com/PHPMailer/PHPMailer/archive/master.zip), so you'll need to either clone the git repository or use the above links to get to the examples directly.
-
-Complete generated API documentation is [available online](https://phpmailer.github.io/PHPMailer/).
-
-You can generate complete API-level documentation by running `phpdoc` in the top-level folder, and documentation will appear in the `docs` folder, though you'll need to have [PHPDocumentor](http://www.phpdoc.org) installed. You may find [the unit tests](https://github.com/PHPMailer/PHPMailer/blob/master/test/PHPMailerTest.php) a good reference for how to do various operations such as encryption.
-
-If the documentation doesn't cover what you need, search the [many questions on Stack Overflow](http://stackoverflow.com/questions/tagged/phpmailer), and before you ask a question about "SMTP Error: Could not connect to SMTP host.", [read the troubleshooting guide](https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting).
-
-## Tests
-[PHPMailer tests](https://github.com/PHPMailer/PHPMailer/tree/master/test/) use PHPUnit 9, with [a polyfill](https://github.com/Yoast/PHPUnit-Polyfills) to let 9-style tests run on older PHPUnit and PHP versions.
-
-[![Test status](https://github.com/PHPMailer/PHPMailer/workflows/Tests/badge.svg)](https://github.com/PHPMailer/PHPMailer/actions)
-
-If this isn't passing, is there something you can do to help?
-
-## Security
-Please disclose any vulnerabilities found responsibly – report security issues to the maintainers privately.
-
-See [SECURITY](https://github.com/PHPMailer/PHPMailer/tree/master/SECURITY.md) and [PHPMailer's security advisories on GitHub](https://github.com/PHPMailer/PHPMailer/security). 
-
-## Contributing
-Please submit bug reports, suggestions, and pull requests to the [GitHub issue tracker](https://github.com/PHPMailer/PHPMailer/issues).
-
-We're particularly interested in fixing edge cases, expanding test coverage, and updating translations.
-
-If you found a mistake in the docs, or want to add something, go ahead and amend the wiki – anyone can edit it.
-
-If you have git clones from prior to the move to the PHPMailer GitHub organisation, you'll need to update any remote URLs referencing the old GitHub location with a command like this from within your clone:
-
-```sh
-git remote set-url upstream https://github.com/PHPMailer/PHPMailer.git
+```json
+{
+  "type": "object",
+  "properties": {
+    "a": {
+      "$ref": "#/definitions/myRecurringSchema"
+    },
+    "b": {
+      "$ref": "#/definitions/myRecurringSchema"
+    }
+  },
+  "definitions": {
+    "myRecurringSchema": {
+      "type": "string"
+    }
+  }
+}
 ```
 
-Please *don't* use the SourceForge or Google Code projects any more; they are obsolete and no longer maintained.
+### Error Messages
 
-## Sponsorship
-Development time and resources for PHPMailer are provided by [Smartmessages.net](https://info.smartmessages.net/), the world's only privacy-first email marketing system.
+This feature allows optionally including error messages created via chained function calls for supported zod types:
 
-<a href="https://info.smartmessages.net/"><img src="https://www.smartmessages.net/img/smartmessages-logo.svg" width="550" alt="Smartmessages.net privacy-first email marketing logo"></a>
+```ts
+// string schema with additional chained function call checks
+const EmailSchema = z.string().email("Invalid email").min(5, "Too short");
 
-Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard cash 💰. Sponsorship through GitHub is a simple and convenient way to say "thank you" to PHPMailer's maintainers and contributors – just click the "Sponsor" button [on the project page](https://github.com/PHPMailer/PHPMailer). If your company uses PHPMailer, consider taking part in Tidelift's enterprise support programme.
+const jsonSchema = zodToJsonSchema(EmailSchema, { errorMessages: true });
+```
 
-## PHPMailer For Enterprise
+#### Result
 
-Available as part of the Tidelift Subscription.
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "string",
+  "format": "email",
+  "minLength": 5,
+  "errorMessage": {
+    "format": "Invalid email",
+    "minLength": "Too short"
+  }
+}
+```
 
-The maintainers of PHPMailer and thousands of other packages are working with Tidelift to deliver commercial
-support and maintenance for the open-source packages you use to build your applications. Save time, reduce risk, and
-improve code health, while paying the maintainers of the exact packages you
-use. [Learn more.](https://tidelift.com/subscription/pkg/packagist-phpmailer-phpmailer?utm_source=packagist-phpmailer-phpmailer&utm_medium=referral&utm_campaign=enterprise&utm_term=repo)
+This allows for field specific, validation step specific error messages which can be useful for building forms and such. This format is accepted by `react-hook-form`'s ajv resolver (and therefor `ajv-errors` which it uses under the hood). Note that if using AJV with this format will require [enabling `ajv-errors`](https://ajv.js.org/packages/ajv-errors.html#usage) as vanilla AJV does not accept this format by default.
+
+#### Custom Error Message Support
+
+- ZodString
+  - regex
+  - min, max
+  - email, cuid, uuid, url
+  - endsWith, startsWith
+- ZodNumber
+  - min, max, lt, lte, gt, gte,
+  - int
+  - multipleOf
+- ZodSet
+  - min, max
+- ZodArray
+  - min, max
+
+### Additional properties
+
+By default, Zod removes undeclared properties when parsing object schemas. In order to replicate the expected output of this behaviour, the default for behaviour of zodToJsonSchema is to set `"additionalProperties"` to `false` (although the correctness of this can be debated). If you wish to allow undeclared properties you can either:
+
+- Set `removeAdditionalStrategy` to `"strict"`. This will allow additional properties for any object schema that is not declared with `.strict()`.
+- Leave `removeAdditionalStrategy` set to its default value of `"passthrough"`, and add `.passtrough()` to your object schema.
+
+#### Removing the `additionalProperties` keyword using the `allowedAdditionalProperties` and/or `rejectedAdditionalProperties` options.
+
+Some schema definitions (like Googles Gen AI API for instance) does not allow the `additionalProperties` keyword at all. Luckily the JSON Schema spec allows for this: leaving the keyword undefined _should_ have the same effect as setting it to true (as per usual YMMV). To enable this behaviour, set the option `allowedAdditionalProperties` to `undefined`.
+
+To exclude the keyword even when additional properties are _not_ allowed, set the `rejectedAdditionalProperties` to `undefined` as well.
+
+_Heads up ⚠️: Both of these options will be ignored if your schema is declared with `.catchall(...)` as the provided schema will be used instead (if valid)._
+
+#### Expected outputs
+
+| `z.object({})` + option   | `"additionalProperties"` value                              |
+| ------------------------- | ----------------------------------------------------------- |
+| `.strip()` (default)      | `false` if strategy is `"passtrough"`, `true` if `"strict"` |
+| `.passtrough()`           | `true`                                                      |
+| `.strict()`               | `false`                                                     |
+| `.catchall(z.string())`   | `{ "type": "string" }`                                      |
+| `.catchall(z.function())` | `undefined` (function schemas are not currently parseable)  |
+
+Substitute `true` and `false` for `undefined` according to `allowedAdditionalProperties` and/or `rejectedAdditionalProperties` respectively.
+
+### `override`
+
+This options takes a callback receiving a Zod schema definition, the current reference object (containing the current ref path and other options), an argument containing inforation about wether or not the schema has been encountered before, and a forceResolution argument.
+
+Important: if you don't want to override the current item you have to return the `ignoreOverride` symbol exported from the index. This is because `undefined` is a valid option to return when you want the property to be excluded from the resulting JSON schema.
+
+```typescript
+import zodToJsonSchema, { ignoreOverride } from "zod-to-json-schema";
+
+zodToJsonSchema(
+  z.object({
+    ignoreThis: z.string(),
+    overrideThis: z.string(),
+    removeThis: z.string(),
+  }),
+  {
+    override: (def, refs) => {
+      const path = refs.currentPath.join("/");
+
+      if (path === "#/properties/overrideThis") {
+        return {
+          type: "integer",
+        };
+      }
+
+      if (path === "#/properties/removeThis") {
+        return undefined;
+      }
+
+      // Important! Do not return `undefined` or void unless you want to remove the property from the resulting schema completely.
+      return ignoreOverride;
+    },
+  },
+);
+```
+
+Expected output:
+
+```json
+{
+  "type": "object",
+  "required": ["ignoreThis", "overrideThis"],
+  "properties": {
+    "ignoreThis": {
+      "type": "string"
+    },
+    "overrideThis": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+### `postProcess`
+
+Besided receiving all arguments of the `override` callback, the `postProcess` callback also receives the generated schema. It should always return a JSON Schema, or `undefined` if you wish to filter it out. Unlike the `override` callback you do not have to return `ignoreOverride` if you are happy with the produced schema; simply return it unchanged.
+
+```typescript
+import zodToJsonSchema, { PostProcessCallback } from "zod-to-json-schema";
+
+// Define the callback to be used to process the output using the PostProcessCallback type:
+const postProcess: PostProcessCallback = (
+  // The original output produced by the package itself:
+  jsonSchema,
+  // The ZodSchema def used to produce the original schema:
+  def,
+  // The refs object containing the current path, passed options, etc.
+  refs,
+) => {
+  if (!jsonSchema) {
+    return jsonSchema;
+  }
+
+  // Try to expand description as JSON meta:
+  if (jsonSchema.description) {
+    try {
+      jsonSchema = {
+        ...jsonSchema,
+        ...JSON.parse(jsonSchema.description),
+      };
+    } catch {}
+  }
+
+  // Make all numbers nullable:
+  if ("type" in jsonSchema! && jsonSchema.type === "number") {
+    jsonSchema.type = ["number", "null"];
+  }
+
+  // Add the refs path, just because
+  (jsonSchema as any).path = refs.currentPath;
+
+  return jsonSchema;
+};
+
+const jsonSchema = zodToJsonSchema(zodSchema, { postProcess });
+```
+
+#### Using `postProcess` for including examples and other meta
+
+Adding support for examples and other JSON Schema meta keys are among the most commonly requested features for this project. Unfortunately the current Zod major (3) has pretty anemic support for this, so some userland hacking is required. Since this is such a common usecase I've included a helper function that simply tries to parse any description as JSON and expand it into the resulting schema.
+
+Simply stringify whatever you want added to the output schema as the description, then import and use `jsonDescription` as the postProcess option:
+
+```typescript
+import zodToJsonSchema, { jsonDescription } from "zod-to-json-schema";
+
+const zodSchema = z.string().describe(
+  JSON.stringify({
+    title: "My string",
+    description: "My description",
+    examples: ["Foo", "Bar"],
+    whatever: 123,
+  }),
+);
+
+const jsonSchema = zodToJsonSchema(zodSchema, {
+  postProcess: jsonDescription,
+});
+```
+
+Expected output:
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "string",
+  "title": "My string",
+  "description": "My description",
+  "examples": ["Foo", "Bar"],
+  "whatever": 123
+}
+```
+
+## Known issues
+
+- The OpenAI target should be considered experimental for now, as some combination of options may break the compatibility.
+- When using `.transform`, the return type is inferred from the supplied function. In other words, there is no schema for the return type, and there is no way to convert it in runtime. Currently the JSON schema will therefore reflect the input side of the Zod schema and not necessarily the output (the latter aka. `z.infer`). If this causes problems with your schema, consider using the effectStrategy "any", which will allow any type of output.
+- JSON Schemas does not support any other key type than strings for objects. When using `z.record` with any other key type, this will be ignored. An exception to this rule is `z.enum` as is supported since 3.11.3
+- Relative JSON pointers, while published alongside [JSON schema draft 2020-12](https://json-schema.org/specification.html), is not technically a part of it. Currently, most resolvers do not handle them at all.
+- Since v3, the Object parser uses `.isOptional()` to check if a property should be included in `required` or not. This has the potentially dangerous behavior of calling `.safeParse` with `undefined`. To work around this, make sure your `preprocess` and other effects callbacks are pure and not liable to throw errors. An issue has been logged in the Zod repo and can be [tracked here](https://github.com/colinhacks/zod/issues/1460).
+- JSON Schema version 2020-12 is not yet officially supported. However, you should be able to use this library to obtain a compatible schema for the 2020-12 format just by changing the returned schema's `$schema` field to: "https://json-schema.org/draft/2020-12/schema#"
+
+## Versioning
+
+This package _does not_ follow semantic versioning. The major and minor versions of this package instead reflects feature parity with the [Zod package](http://npmjs.com/package/zod).
+
+I will do my best to keep API-breaking changes to an absolute minimum, but new features may appear as "patches", such as introducing the options pattern in 3.9.1.
 
 ## Changelog
-See [changelog](changelog.md).
 
-## History
-- PHPMailer was originally written in 2001 by Brent R. Matzelle as a [SourceForge project](http://sourceforge.net/projects/phpmailer/).
-- [Marcus Bointon](https://github.com/Synchro) (`coolbru` on SF) and Andy Prevost (`codeworxtech`) took over the project in 2004.
-- Became an Apache incubator project on Google Code in 2010, managed by Jim Jagielski.
-- Marcus created [his fork on GitHub](https://github.com/Synchro/PHPMailer) in 2008.
-- Jim and Marcus decide to join forces and use GitHub as the canonical and official repo for PHPMailer in 2013.
-- PHPMailer moves to [the PHPMailer organisation](https://github.com/PHPMailer) on GitHub in 2013.
-
-### What's changed since moving from SourceForge?
-- Official successor to the SourceForge and Google Code projects.
-- Test suite.
-- Continuous integration with GitHub Actions.
-- Composer support.
-- Public development.
-- Additional languages and language strings.
-- CRAM-MD5 authentication support.
-- Preserves full repo history of authors, commits, and branches from the original SourceForge project.
+https://github.com/StefanTerdell/zod-to-json-schema/blob/master/changelog.md

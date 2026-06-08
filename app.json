@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "PointShift Scanner",
+    "slug": "pointshift-scanner",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "pointshift",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.pointshift.scanner"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera"
+        }
+      ]
+    ]
+  }
+}
