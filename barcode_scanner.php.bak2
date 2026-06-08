@@ -1,0 +1,1089 @@
+<?php<?php
+
+require_once '../config.php';require_once '../config.php';
+
+User::requireLogin();User::requireLogin();
+
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'staff') {if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'staff') {
+
+    header('Location: ../login.php');    header('Location: ../login.php');
+
+    exit();    exit();
+
+}}
+
+
+
+$title = 'Barcode Scanner';$title = 'Barcode Scanner';
+
+$db = Database::getInstance()->getConnection();$db = Database::getInstance()->getConnection();
+
+
+
+ob_start();// Handle manual search form
+
+?>$product = null;
+
+<div class="container py-4">if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['code'])) {
+
+    <div class="row">    $code = trim($_POST['code']);
+
+        <div class="col-lg-8">    if ($code !== '') {
+
+            <div class="card mb-4">        $stmt = $db->prepare("SELECT p.*, c.name as category_name 
+
+                <div class="card-header d-flex justify-content-between align-items-center">                             FROM products p 
+
+                    <h5 class="mb-0">Barcode Scanner</h5>                             LEFT JOIN categories c ON p.category_id = c.id 
+
+                    <div class="btn-group">                             WHERE p.barcode = ? OR p.sku = ? LIMIT 1");
+
+                        <button class="btn btn-primary" id="startButton">        $stmt->execute([$code, $code]);
+
+                            <i class="fas fa-camera"></i> Start Scanner        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        </button>    }
+
+                        <button class="btn btn-danger" id="resetButton" style="display:none">}
+
+                            <i class="fas fa-stop"></i> Stop
+
+                        </button>ob_start();
+
+                    </div>?>
+
+                </div><div class="container py-4">
+
+                <div class="card-body">    <div class="row">
+
+                    <div id="reader" class="mb-3"></div>        <div class="col-lg-8">
+
+                                <div class="card mb-4">
+
+                    <!-- Manual entry form -->                <div class="card-header d-flex justify-content-between align-items-center">
+
+                    <form method="post" class="mt-3">                    <h5 class="mb-0">Barcode Scanner</h5>
+
+                        <div class="input-group">                    <div class="btn-group">
+
+                            <input type="text" name="code" class="form-control" placeholder="Enter barcode or SKU manually">                        <button class="btn btn-primary btn-sm" id="startBarcodeScanner">
+
+                            <button type="submit" class="btn btn-primary">Search</button>                            <i class="fas fa-camera"></i> Start Scanner
+
+                        </div>                        </button>
+
+                    </form>                        <button class="btn btn-danger btn-sm" id="stopBarcodeScanner" disabled>
+
+                </div>                            <i class="fas fa-stop"></i> Stop
+
+            </div>                        </button>
+
+        </div>                        <button class="btn btn-success btn-sm" id="captureBarcodeBtn" disabled>
+
+                                    <i class="fas fa-camera"></i> Capture Photo
+
+        <div class="col-lg-4">                        </button>
+
+            <div class="card">                    </div>
+
+                <div class="card-header">                    <div id="capturePreview" class="mt-3" style="display: none;">
+
+                    <h5 class="mb-0">Product Details</h5>                        <canvas id="captureCanvas" style="max-width: 100%; display: none;"></canvas>
+
+                </div>                        <div class="mt-2">
+
+                <div class="card-body" id="productInfo">                            <button class="btn btn-primary btn-sm" id="retakeBtn" style="display: none;">
+
+                    <div class="alert alert-info">Scan a product barcode to view details</div>                                <i class="fas fa-redo"></i> Retake
+
+                </div>                            </button>
+
+            </div>                            <button class="btn btn-success btn-sm" id="processImageBtn" style="display: none;">
+
+        </div>                                <i class="fas fa-check"></i> Process Image
+
+    </div>                            </button>
+
+</div>                        </div>
+
+                    </div>
+
+<style>                </div>
+
+#reader {                <div class="card-body">
+
+    width: 100%;                    <div id="interactive" class="viewport mb-3">
+
+    min-height: 300px;                        <video autoplay="true" preload="auto" src="" muted="true" playsinline="true"></video>
+
+    background: #f8f9fa;                        <canvas class="drawingBuffer"></canvas>
+
+    border: 2px solid #dee2e6;                        <div class="scanner-laser"></div>
+
+    border-radius: 4px;                    </div>
+
+}                    <!-- Manual entry form -->
+
+#reader > video {                    <form method="post" class="mt-3">
+
+    max-width: 100%;                        <div class="input-group">
+
+    width: 100%;                            <input type="text" name="code" class="form-control" placeholder="Enter barcode or SKU manually">
+
+}                            <button type="submit" class="btn btn-primary">Search</button>
+
+#status-indicator {                        </div>
+
+    position: fixed;                    </form>
+
+    top: 20px;                </div>
+
+    right: 20px;            </div>
+
+    padding: 10px 15px;        </div>
+
+    background: rgba(0,0,0,0.8);        
+
+    color: white;        <div class="col-lg-4">
+
+    border-radius: 4px;            <!-- Product Information Card -->
+
+    z-index: 1000;            <div class="card">
+
+    display: none;                <div class="card-header">
+
+}                    <h5 class="mb-0">Product Details</h5>
+
+.product-info-card {                </div>
+
+    background: #fff;                <div class="card-body" id="productInfo">
+
+    border-radius: 8px;                    <div class="alert alert-info">Scan a product barcode to view details</div>
+
+    padding: 20px;                </div>
+
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);            </div>
+
+}        </div>
+
+.info-grid {    </div>
+
+    display: grid;
+
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));    <!-- Add New Product Modal -->
+
+    gap: 15px;    <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+
+    margin-bottom: 20px;        <div class="modal-dialog modal-lg">
+
+}            <div class="modal-content">
+
+.info-item {                <div class="modal-header">
+
+    background: #f8f9fa;                    <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
+
+    padding: 15px;                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+    border-radius: 6px;                </div>
+
+}                <div class="modal-body">
+
+.info-label {                    <form id="addProductForm">
+
+    font-size: 0.9em;                        <div class="row">
+
+    color: #6c757d;                            <div class="col-md-6">
+
+    margin-bottom: 5px;                                <div class="mb-3">
+
+}                                    <label for="newProductBarcode" class="form-label">Barcode</label>
+
+.info-value {                                    <input type="text" class="form-control" id="newProductBarcode" readonly required>
+
+    font-size: 1.2em;                                </div>
+
+    font-weight: 600;                                <div class="mb-3">
+
+}                                    <label for="newProductName" class="form-label">Product Name</label>
+
+</style>                                    <input type="text" class="form-control" id="newProductName" required>
+
+                                </div>
+
+<!-- Include the HTML5-QRCode library -->                                <div class="mb-3">
+
+<script src="https://unpkg.com/html5-qrcode"></script>                                    <label for="newProductSKU" class="form-label">SKU</label>
+
+<script>                                    <input type="text" class="form-control" id="newProductSKU">
+
+document.addEventListener('DOMContentLoaded', function() {                                </div>
+
+    const html5QrCode = new Html5Qrcode("reader");                                <div class="mb-3">
+
+    let isScanning = false;                                    <label for="newProductPrice" class="form-label">Price</label>
+
+                                        <input type="number" step="0.01" class="form-control" id="newProductPrice" required>
+
+    // Create status indicator                                </div>
+
+    const statusIndicator = document.createElement('div');                            </div>
+
+    statusIndicator.id = 'status-indicator';                            <div class="col-md-6">
+
+    document.body.appendChild(statusIndicator);                                <div class="mb-3">
+
+                                    <label for="newProductCategory" class="form-label">Category</label>
+
+    function showStatus(message, isError = false) {                                    <input type="text" class="form-control" id="newProductCategory" list="categoryList">
+
+        statusIndicator.textContent = message;                                    <datalist id="categoryList">
+
+        statusIndicator.style.backgroundColor = isError ? 'rgba(220,53,69,0.9)' : 'rgba(0,0,0,0.8)';                                        <?php
+
+        statusIndicator.style.display = 'block';                                        $categories = $db->query("SELECT name FROM categories ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+
+        setTimeout(() => statusIndicator.style.display = 'none', 3000);                                        foreach ($categories as $category) {
+
+    }                                            echo "<option value=\"" . htmlspecialchars($category) . "\">";
+
+                                        }
+
+    async function startScanner() {                                        ?>
+
+        try {                                    </datalist>
+
+            const devices = await Html5Qrcode.getCameras();                                </div>
+
+            if (devices && devices.length) {                                <div class="mb-3">
+
+                const config = {                                    <label for="newProductStock" class="form-label">Initial Stock</label>
+
+                    fps: 10,                                    <input type="number" class="form-control" id="newProductStock" value="1" min="0" required>
+
+                    qrbox: { width: 250, height: 150 },                                </div>
+
+                };                                <div class="mb-3">
+
+                                    <label for="newProductExpiry" class="form-label">Expiry Date</label>
+
+                await html5QrCode.start(                                    <input type="date" class="form-control" id="newProductExpiry">
+
+                    { facingMode: "environment" },                                 </div>
+
+                    config,                                <div class="mb-3">
+
+                    async (decodedText) => {                                    <label for="newProductDescription" class="form-label">Description</label>
+
+                        // Success callback                                    <textarea class="form-control" id="newProductDescription" rows="2"></textarea>
+
+                        await processBarcode(decodedText);                                </div>
+
+                    },                            </div>
+
+                    (errorMessage) => {                        </div>
+
+                        // Error callback                    </form>
+
+                        console.log(errorMessage);                </div>
+
+                    }                <div class="modal-footer">
+
+                );                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+
+                    <button type="submit" form="addProductForm" class="btn btn-primary">Add Product</button>
+
+                isScanning = true;                </div>
+
+                document.getElementById('startButton').style.display = 'none';            </div>
+
+                document.getElementById('resetButton').style.display = 'inline-block';        </div>
+
+                showStatus('Scanner started successfully');    </div>
+
+            } else {</div>
+
+                showStatus('No cameras found', true);
+
+            }<style>
+
+        } catch (err) {    .viewport {
+
+            console.error('Error starting scanner:', err);        position: relative;
+
+            showStatus('Failed to start scanner. Please check camera permissions.', true);        width: 100%;
+
+        }        height: 300px;
+
+    }    }
+
+    #interactive.viewport > canvas, #interactive.viewport > video {
+
+    async function stopScanner() {        max-width: 100%;
+
+        if (isScanning) {        width: 100%;
+
+            try {        height: 300px;
+
+                await html5QrCode.stop();        object-fit: cover;
+
+                isScanning = false;    }
+
+                document.getElementById('startButton').style.display = 'inline-block';    canvas.drawing, canvas.drawingBuffer {
+
+                document.getElementById('resetButton').style.display = 'none';        position: absolute;
+
+                showStatus('Scanner stopped');        left: 0;
+
+            } catch (err) {        top: 0;
+
+                console.error('Error stopping scanner:', err);        width: 100%;
+
+                showStatus('Error stopping scanner', true);        height: 100%;
+
+            }    }
+
+        }    .scanner-laser {
+
+    }        position: absolute;
+
+        top: 40%;
+
+    async function processBarcode(barcode) {        bottom: 40%;
+
+        try {        left: 10%;
+
+            const response = await fetch('add_scanned_to_inventory.php', {        right: 10%;
+
+                method: 'POST',        border: 2px solid transparent;
+
+                headers: { 'Content-Type': 'application/json' },        opacity: 0;
+
+                body: JSON.stringify({ barcode: barcode })        transition: opacity 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+
+            });        z-index: 2;
+
+                    pointer-events: none;
+
+            const data = await response.json();    }
+
+            if (data.success && data.product) {    .scanner-laser.active {
+
+                displayProductInfo(data.product);        border-color: #28a745;
+
+                showStatus('Product found!');        opacity: 1;
+
+                // Pause scanning briefly to avoid multiple scans        box-shadow: 0 0 10px rgba(40,167,69,0.6);
+
+                await html5QrCode.pause();    }
+
+                setTimeout(async () => await html5QrCode.resume(), 2000);    #status-indicator {
+
+            } else {        position: fixed;
+
+                showAddNewProductForm(barcode);        top: 20px;
+
+                showStatus('Product not found. Add it to inventory?');        right: 20px;
+
+            }        padding: 10px;
+
+        } catch (error) {        background: rgba(0,0,0,0.7);
+
+            console.error('Error processing barcode:', error);        color: white;
+
+            showStatus('Error processing barcode', true);        border-radius: 5px;
+
+        }        z-index: 1000;
+
+    }    }
+
+</style>
+
+    function displayProductInfo(product) {
+
+        const infoDiv = document.getElementById('productInfo');<!-- Include QuaggaJS for barcode scanning -->
+
+        if (!infoDiv || !product) return;<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+
+
+
+        const expiryDate = product.expiry ? new Date(product.expiry).toLocaleDateString() : 'Not set';<script>
+
+        const stockClass = product.stock_quantity <= (product.low_stock_threshold || 10) ? 'text-danger' : 'text-success';document.addEventListener('DOMContentLoaded', function() {
+
+        const priceFormatted = new Intl.NumberFormat('en-PH', {     let lastScannedCode = '';
+
+            style: 'currency',     let isScanning = false;
+
+            currency: 'PHP'     let videoStream = null;
+
+        }).format(product.price);    
+
+    // Create status indicator
+
+        infoDiv.innerHTML = `    const statusIndicator = document.createElement('div');
+
+            <div class="product-info-card">    statusIndicator.id = 'status-indicator';
+
+                <h4 class="mb-3">${product.name}</h4>    document.body.appendChild(statusIndicator);
+
+                <div class="info-grid">
+
+                    <div class="info-item">    // Create camera container
+
+                        <div class="info-label">Price</div>    const cameraContainer = document.createElement('div');
+
+                        <div class="info-value">${priceFormatted}</div>    cameraContainer.className = 'camera-controls mb-3';
+
+                    </div>    
+
+                    <div class="info-item">    // Add camera selection dropdown
+
+                        <div class="info-label">Stock</div>    const cameraSelect = document.createElement('select');
+
+                        <div class="info-value ${stockClass}">${product.stock_quantity} units</div>    cameraSelect.id = 'cameraSelect';
+
+                    </div>    cameraSelect.className = 'form-select';
+
+                    <div class="info-item">    
+
+                        <div class="info-label">Expiry Date</div>    const defaultOption = document.createElement('option');
+
+                        <div class="info-value">    defaultOption.value = '';
+
+                            <div class="input-group">    defaultOption.text = 'Select a camera...';
+
+                                <input type="date" class="form-control form-control-sm"     cameraSelect.appendChild(defaultOption);
+
+                                       id="expiryDateInput"     
+
+                                       value="${product.expiry || ''}"    cameraContainer.appendChild(cameraSelect);
+
+                                       min="${new Date().toISOString().split('T')[0]}">    document.querySelector('.card-body').insertBefore(cameraContainer, document.querySelector('#interactive'));
+
+                                <button class="btn btn-sm btn-outline-primary" 
+
+                                        onclick="updateExpiry(${product.id})">Update</button>    // Get available cameras
+
+                            </div>    async function populateCameras() {
+
+                        </div>        try {
+
+                    </div>            const devices = await navigator.mediaDevices.enumerateDevices();
+
+                </div>            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+                <div class="mt-3">            
+
+                    <small class="text-muted">            cameraSelect.innerHTML = videoDevices.map((device, index) => 
+
+                        <strong>SKU:</strong> ${product.sku || 'N/A'}<br>                `<option value="${device.deviceId}">${device.label || `Camera ${index + 1}`}</option>`
+
+                        <strong>Barcode:</strong> ${product.barcode}<br>            ).join('');
+
+                        <strong>Category:</strong> ${product.category_name || 'Uncategorized'}            
+
+                    </small>            console.log('Available cameras:', videoDevices);
+
+                </div>        } catch (error) {
+
+            </div>`;            console.error('Error getting cameras:', error);
+
+    }            updateStatus('Error accessing cameras', true);
+
+        }
+
+    function showAddNewProductForm(barcode) {    }
+
+        const infoDiv = document.getElementById('productInfo');
+
+        infoDiv.innerHTML = `    // Request camera permissions and populate dropdown
+
+            <div class="alert alert-warning">    navigator.mediaDevices.getUserMedia({ video: true })
+
+                <h5>Product Not Found</h5>        .then(stream => {
+
+                <p>Barcode: ${barcode}</p>            stream.getTracks().forEach(track => track.stop());
+
+                <button type="button" class="btn btn-primary mt-2"             populateCameras();
+
+                        onclick="showAddProductModal('${barcode}')">        })
+
+                    Add New Product        .catch(error => {
+
+                </button>            console.error('Error accessing camera:', error);
+
+            </div>`;            updateStatus('Error accessing camera. Please check permissions.', true);
+
+    }        });
+
+    
+
+    // Event Listeners    function updateStatus(message, isError = false) {
+
+    document.getElementById('startButton').addEventListener('click', startScanner);        if (!statusIndicator) return;
+
+    document.getElementById('resetButton').addEventListener('click', stopScanner);        statusIndicator.textContent = message;
+
+        statusIndicator.style.display = 'block';
+
+    // Expose necessary functions to window        statusIndicator.style.backgroundColor = isError ? 'rgba(220,53,69,0.9)' : 'rgba(0,0,0,0.7)';
+
+    window.updateExpiry = async function(productId) {        setTimeout(() => {
+
+        const newExpiry = document.getElementById('expiryDateInput').value;            statusIndicator.style.display = 'none';
+
+        if (!newExpiry) {        }, 3000);
+
+            showStatus('Please select a valid expiry date', true);    }
+
+            return;
+
+        }    async function startBarcodeScanner() {
+
+        try {
+
+        try {            console.log('Initializing scanner...');
+
+            const response = await fetch('update_product.php', {            updateStatus('Initializing camera...');
+
+                method: 'POST',            
+
+                headers: { 'Content-Type': 'application/json' },            // Check if camera selection is made
+
+                body: JSON.stringify({            const selectedCamera = document.getElementById('cameraSelect').value;
+
+                    product_id: productId,            if (!selectedCamera) {
+
+                    expiry: newExpiry                updateStatus('Please select a camera first', true);
+
+                })                return;
+
+            });            }
+
+
+
+            const data = await response.json();            // Stop any existing stream
+
+            if (data.success) {            if (videoStream) {
+
+                showStatus('Expiry date updated successfully');                videoStream.getTracks().forEach(track => track.stop());
+
+                displayProductInfo(data.product);            }
+
+            } else {            
+
+                showStatus(data.error || 'Failed to update expiry date', true);            try {
+
+            }                // Get new stream with explicit constraints
+
+        } catch (error) {                videoStream = await navigator.mediaDevices.getUserMedia({
+
+            console.error('Error updating expiry date:', error);                    video: {
+
+            showStatus('Error updating expiry date', true);                        deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
+
+        }                        width: { min: 640, ideal: 1280, max: 1920 },
+
+    };                        height: { min: 480, ideal: 720, max: 1080 },
+
+                        facingMode: "environment",
+
+    // Cleanup on page unload                        aspectRatio: { ideal: 1.777777778 }
+
+    window.addEventListener('beforeunload', stopScanner);                    }
+
+});                });
+
+</script>                
+
+                const videoElement = document.querySelector('#interactive video');
+
+<?php                videoElement.srcObject = videoStream;
+
+$content = ob_get_clean();                await videoElement.play();
+
+include __DIR__ . '/views/layout.php';                
+
+?>                document.getElementById('captureBarcodeBtn').disabled = false;
+                updateStatus('Camera initialized successfully');
+            
+            await Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector("#interactive"),
+                    constraints: {
+                        deviceId: document.getElementById('cameraSelect').value,
+                        width: { min: 640, ideal: 1280, max: 1920 },
+                        height: { min: 480, ideal: 720, max: 1080 },
+                        aspectRatio: { min: 1, max: 2 },
+                        facingMode: "environment"
+                    },
+                },
+                decoder: {
+                    readers: [
+                        "ean_reader",
+                        "ean_8_reader",
+                        "code_128_reader",
+                        "code_39_reader",
+                        "upc_reader",
+                        "upc_e_reader"
+                    ],
+                    debug: {
+                        drawBoundingBox: true,
+                        showFrequency: true,
+                        drawScanline: true,
+                        showPattern: true
+                    },
+                    multiple: false
+                },
+                locator: {
+                    patchSize: "medium",
+                    halfSample: true
+                },
+                numOfWorkers: navigator.hardwareConcurrency || 4,
+                frequency: 10,
+                debug: true
+            });
+            
+            Quagga.start();
+            isScanning = true;
+            document.getElementById('startBarcodeScanner').disabled = true;
+            document.getElementById('stopBarcodeScanner').disabled = false;
+            updateStatus('Scanner started');
+            
+            Quagga.onDetected(async function(result) {
+                if (!result || !result.codeResult || !result.codeResult.code) return;
+                
+                const code = result.codeResult.code;
+                if (code === lastScannedCode) return; // Prevent duplicate scans
+                
+                lastScannedCode = code;
+                document.querySelector('.scanner-laser').classList.add('active');
+                setTimeout(() => document.querySelector('.scanner-laser').classList.remove('active'), 800);
+                
+                try {
+                    const response = await fetch('add_scanned_to_inventory.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ barcode: code })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success && data.product) {
+                        displayProductInfo(data.product);
+                        updateStatus('Product found!');
+                    } else {
+                        showAddNewProductButton(code);
+                        updateStatus('Product not found. Add it to inventory?');
+                    }
+                } catch (error) {
+                    console.error('Error processing barcode:', error);
+                    updateStatus('Error processing barcode', true);
+                }
+                
+                // Reset after 2 seconds to allow new scans
+                setTimeout(() => {
+                    lastScannedCode = '';
+                }, 2000);
+            });
+            
+        } catch (error) {
+            console.error('Error starting scanner:', error);
+            updateStatus('Failed to start scanner', true);
+        }
+    }
+
+    function stopBarcodeScanner() {
+        if (isScanning) {
+            Quagga.stop();
+            isScanning = false;
+            document.getElementById('startBarcodeScanner').disabled = false;
+            document.getElementById('stopBarcodeScanner').disabled = true;
+            document.getElementById('captureBarcodeBtn').disabled = true;
+            
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            updateStatus('Scanner stopped');
+        }
+    }
+
+    // Capture functionality
+    async function captureImage() {
+        if (!videoStream) return;
+
+        const video = document.querySelector('#interactive video');
+        const canvas = document.getElementById('captureCanvas');
+        const capturePreview = document.getElementById('capturePreview');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const processImageBtn = document.getElementById('processImageBtn');
+
+        // Set canvas size to match video dimensions
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        // Draw video frame to canvas
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Show capture preview and controls
+        canvas.style.display = 'block';
+        capturePreview.style.display = 'block';
+        retakeBtn.style.display = 'inline-block';
+        processImageBtn.style.display = 'inline-block';
+        
+        // Temporarily stop the video stream
+        video.style.display = 'none';
+        if (isScanning) {
+            Quagga.stop();
+            isScanning = false;
+        }
+    }
+
+    // Process captured image
+    async function processImage() {
+        const canvas = document.getElementById('captureCanvas');
+        
+        try {
+            // Create a new Quagga instance for the static image
+            await Quagga.init({
+                inputStream: {
+                    name: "Image",
+                    type: "ImageStream",
+                    src: canvas.toDataURL('image/jpeg')
+                },
+                decoder: {
+                    readers: [
+                        "ean_reader",
+                        "ean_8_reader",
+                        "code_128_reader",
+                        "code_39_reader",
+                        "upc_reader",
+                        "upc_e_reader"
+                    ],
+                    multiple: false
+                }
+            });
+
+            Quagga.start();
+
+            // Process the image
+            Quagga.decodeSingle({
+                src: canvas.toDataURL('image/jpeg'),
+                numOfWorkers: navigator.hardwareConcurrency || 4,
+                inputStream: {
+                    size: 800
+                },
+                decoder: {
+                    readers: [
+                        "ean_reader",
+                        "ean_8_reader",
+                        "code_128_reader",
+                        "code_39_reader",
+                        "upc_reader",
+                        "upc_e_reader"
+                    ]
+                }
+            }, function(result) {
+                if (result && result.codeResult) {
+                    processScannedCode(result.codeResult.code);
+                    updateStatus('Barcode found: ' + result.codeResult.code);
+                } else {
+                    updateStatus('No barcode found in image', true);
+                }
+                resetCapture();
+            });
+        } catch (error) {
+            console.error('Error processing image:', error);
+            updateStatus('Error processing image', true);
+            resetCapture();
+        }
+    }
+
+    // Reset capture state
+    function resetCapture() {
+        const video = document.querySelector('#interactive video');
+        const canvas = document.getElementById('captureCanvas');
+        const capturePreview = document.getElementById('capturePreview');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const processImageBtn = document.getElementById('processImageBtn');
+
+        // Hide capture preview and controls
+        canvas.style.display = 'none';
+        capturePreview.style.display = 'none';
+        retakeBtn.style.display = 'none';
+        processImageBtn.style.display = 'none';
+
+        // Show video stream
+        video.style.display = 'block';
+        
+        // Restart scanner if it was running
+        if (!isScanning) {
+            startBarcodeScanner();
+        }
+    }
+
+    // Process scanned barcode
+    async function processScannedCode(code) {
+        try {
+            const response = await fetch('add_scanned_to_inventory.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ barcode: code })
+            });
+            
+            const data = await response.json();
+            if (data.success && data.product) {
+                displayProductInfo(data.product);
+                updateStatus('Product found!');
+            } else {
+                showAddNewProductButton(code);
+                updateStatus('Product not found. Add it to inventory?');
+            }
+        } catch (error) {
+            console.error('Error processing barcode:', error);
+            updateStatus('Error processing barcode', true);
+        }
+    }
+
+    function displayProductInfo(product) {
+        const infoDiv = document.getElementById('productInfo');
+        if (!infoDiv || !product) return;
+
+        const expiryDate = product.expiry ? new Date(product.expiry).toLocaleDateString() : 'Not set';
+        const stockClass = product.stock_quantity <= (product.low_stock_threshold || 10) ? 'text-danger' : 'text-success';
+        const priceFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'PHP' }).format(product.price);
+
+        infoDiv.innerHTML = `
+            <div class="product-info-card">
+                <h3 class="product-name mb-4">${product.name}</h3>
+                <div class="info-grid mb-4">
+                    <div class="info-item">
+                        <div class="info-label">Price</div>
+                        <div class="info-value price-value">${priceFormatted}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Stock</div>
+                        <div class="info-value ${stockClass}">${product.stock_quantity} units</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Expiry Date</div>
+                        <div class="info-value">
+                            <div class="input-group">
+                                <input type="date" class="form-control" id="expiryDateInput" 
+                                    value="${product.expiry || ''}" 
+                                    min="${new Date().toISOString().split('T')[0]}">
+                                <button class="btn btn-outline-primary" onclick="updateExpiryDate(${product.id})">
+                                    Update
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="additional-info">
+                    <p><strong>SKU:</strong> ${product.sku || 'N/A'}</p>
+                    <p><strong>Barcode:</strong> ${product.barcode}</p>
+                    <p><strong>Category:</strong> ${product.category_name || 'Uncategorized'}</p>
+                    ${product.description ? `<p><strong>Description:</strong> ${product.description}</p>` : ''}
+                </div>
+            </div>
+            <style>
+                .product-info-card {
+                    background: #fff;
+                    border-radius: 8px;
+                    padding: 20px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .product-name {
+                    color: #2c3e50;
+                    font-weight: bold;
+                    border-bottom: 2px solid #eee;
+                    padding-bottom: 10px;
+                }
+                .info-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 20px;
+                }
+                .info-item {
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 6px;
+                }
+                .info-label {
+                    font-size: 0.9em;
+                    color: #6c757d;
+                    margin-bottom: 5px;
+                }
+                .info-value {
+                    font-size: 1.2em;
+                    font-weight: 600;
+                    color: #2c3e50;
+                }
+                .price-value {
+                    color: #28a745;
+                }
+                .additional-info {
+                    margin-top: 20px;
+                    padding-top: 20px;
+                    border-top: 1px solid #eee;
+                }
+                .additional-info p {
+                    margin-bottom: 8px;
+                }
+                .text-danger { color: #dc3545 !important; }
+                .text-success { color: #28a745 !important; }
+            </style>
+        `;
+    }
+
+    function showAddNewProductButton(barcode) {
+        const infoDiv = document.getElementById('productInfo');
+        if (!infoDiv) return;
+
+        infoDiv.innerHTML = `
+            <div class="alert alert-warning">
+                <h5>Product Not Found</h5>
+                <p>Barcode: ${barcode}</p>
+                <button type="button" class="btn btn-primary" id="showAddProductModalBtn">
+                    Add New Product
+                </button>
+            </div>
+        `;
+        document.getElementById('newProductBarcode').value = barcode;
+    }
+
+    // Event Listeners
+    document.getElementById('startBarcodeScanner').addEventListener('click', startBarcodeScanner);
+    document.getElementById('stopBarcodeScanner').addEventListener('click', stopBarcodeScanner);
+    document.getElementById('captureBarcodeBtn').addEventListener('click', captureImage);
+    document.getElementById('retakeBtn').addEventListener('click', resetCapture);
+    document.getElementById('processImageBtn').addEventListener('click', processImage);
+    
+    // Camera selection change handler
+    document.getElementById('cameraSelect').addEventListener('change', function() {
+        if (isScanning) {
+            stopBarcodeScanner();
+            setTimeout(startBarcodeScanner, 500);
+        }
+    });
+
+    // Add debug logging
+    Quagga.onProcessed(function(result) {
+        var drawingCtx = Quagga.canvas.ctx.overlay,
+            drawingCanvas = Quagga.canvas.dom.overlay;
+
+        if (result) {
+            if (result.boxes) {
+                drawingCtx.clearRect(0, 0, parseInt(drawingCanvas.getAttribute("width")), parseInt(drawingCanvas.getAttribute("height")));
+                result.boxes.filter(function(box) {
+                    return box !== result.box;
+                }).forEach(function(box) {
+                    Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx, { color: "green", lineWidth: 2 });
+                });
+            }
+
+            if (result.box) {
+                Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, { color: "#00F", lineWidth: 2 });
+            }
+
+            if (result.codeResult && result.codeResult.code) {
+                Quagga.ImageDebug.drawPath(result.line, { x: 'x', y: 'y' }, drawingCtx, { color: 'red', lineWidth: 3 });
+            }
+        }
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'showAddProductModalBtn') {
+            const modal = new bootstrap.Modal(document.getElementById('addProductModal'));
+            modal.show();
+        }
+    });
+
+    // Handle add product form submit
+    document.getElementById('addProductForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            barcode: document.getElementById('newProductBarcode').value.trim(),
+            name: document.getElementById('newProductName').value.trim(),
+            sku: document.getElementById('newProductSKU').value.trim(),
+            category: document.getElementById('newProductCategory').value.trim(),
+            expiry: document.getElementById('newProductExpiry').value,
+            price: parseFloat(document.getElementById('newProductPrice').value) || 0,
+            stock: parseInt(document.getElementById('newProductStock').value) || 1,
+            description: document.getElementById('newProductDescription').value.trim()
+        };
+
+        try {
+            const response = await fetch('add_scanned_to_inventory.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+            if (data.success && data.product) {
+                bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
+                displayProductInfo(data.product);
+                updateStatus('Product added successfully!');
+            } else {
+                updateStatus(data.error || 'Failed to add product', true);
+            }
+        } catch (error) {
+            console.error('Error adding product:', error);
+            updateStatus('Error adding product', true);
+        }
+    });
+
+    // Function to update expiry date
+    window.updateExpiryDate = async function(productId) {
+        const newExpiryDate = document.getElementById('expiryDateInput').value;
+        if (!newExpiryDate) {
+            updateStatus('Please select a valid expiry date', true);
+            return;
+        }
+
+        try {
+            const response = await fetch('update_product.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    product_id: productId,
+                    expiry: newExpiryDate
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                updateStatus('Expiry date updated successfully!');
+                // Refresh product display
+                const productResponse = await fetch('add_scanned_to_inventory.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ barcode: data.product.barcode })
+                });
+                const productData = await productResponse.json();
+                if (productData.success && productData.product) {
+                    displayProductInfo(productData.product);
+                }
+            } else {
+                updateStatus(data.error || 'Failed to update expiry date', true);
+            }
+        } catch (error) {
+            console.error('Error updating expiry date:', error);
+            updateStatus('Error updating expiry date', true);
+        }
+    };
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', stopBarcodeScanner);
+});
+</script>
+
+<?php
+$content = ob_get_clean();
+include __DIR__ . '/views/layout.php';
+?>

@@ -1,49 +1,389 @@
 <?php
-$requireLogin = require_once '../config.php';
+require_once '../config.php';
 User::requireLogin();
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'cashier') {
-    header('Location: ../login.php');
+
+// Redirect admin to admin panel
+if (User::isAdmin()) {
+    header('Location: ../dashboard.php');
     exit();
 }
 
-$title = 'Cashier Dashboard';
-$db = Database::getInstance()->getConnection();
-$today = date('Y-m-d');
-$salesToday = $db->query("SELECT SUM(total_amount) FROM orders WHERE DATE(created_at) = '$today' AND status = 'completed'")->fetchColumn() ?? 0;
-$transactionCount = $db->query("SELECT COUNT(*) FROM orders WHERE DATE(created_at) = '$today'")->fetchColumn() ?? 0;
-$topProducts = $db->query("SELECT p.name, SUM(oi.quantity) as qty FROM order_items oi JOIN products p ON oi.product_id = p.id JOIN orders o ON oi.order_id = o.id WHERE DATE(o.created_at) = '$today' GROUP BY p.id ORDER BY qty DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+$dashboardController = new DashboardController();
+$stats = $dashboardController->getStats();
+$recentOrders = $dashboardController->getRecentOrders(5);
 
-$content = '<div class="container py-4">
-  <h2 class="mb-4">Today\'s Sales Overview</h2>
-  <div class="row mb-4">
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-body text-center">
-          <h5>Total Sales</h5>
-          <h3 class="text-success">₱'.number_format($salesToday,2).'</h3>
+// Additional statistics for inventory dashboard cards
+$db = Database::getInstance()->getConnection();
+$user_id = $_SESSION['user_id'];
+
+// Get comprehensive statistics
+$inventoryStats = [
+    'total_products' => $db->query("SELECT COUNT(*) FROM products")->fetchColumn(),
+    'low_stock' => $db->query("SELECT COUNT(*) FROM products WHERE stock_quantity <= low_stock_threshold AND stock_quantity > 0")->fetchColumn(),
+    'out_of_stock' => $db->query("SELECT COUNT(*) FROM products WHERE stock_quantity = 0")->fetchColumn(),
+    'in_stock' => $db->query("SELECT COUNT(*) FROM products WHERE stock_quantity > low_stock_threshold")->fetchColumn(),
+];
+
+// Get today's sales
+$todayQuery = $db->query("
+    SELECT 
+        COUNT(*) as order_count,
+        COALESCE(SUM(total_amount), 0) as total_sales
+    FROM orders 
+    WHERE DATE(created_at) = CURDATE() AND status = 'completed'
+");
+$todayStats = $todayQuery->fetch(PDO::FETCH_ASSOC);
+
+// Get this week's sales
+$weekQuery = $db->query("
+    SELECT 
+        COUNT(*) as order_count,
+        COALESCE(SUM(total_amount), 0) as total_sales
+    FROM orders 
+    WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1) AND status = 'completed'
+");
+$weekStats = $weekQuery->fetch(PDO::FETCH_ASSOC);
+
+// Get sales by payment method for chart
+$paymentMethodQuery = $db->query("
+    SELECT 
+        payment_method,
+        COUNT(*) as count,
+        SUM(total_amount) as total
+    FROM orders 
+    WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND status = 'completed'
+    GROUP BY payment_method
+");
+$paymentMethods = $paymentMethodQuery->fetchAll(PDO::FETCH_ASSOC);
+
+// Get top selling products (last 30 days)
+$topProductsQuery = $db->query("
+    SELECT 
+        p.name,
+        SUM(oi.quantity) as total_sold,
+        SUM(oi.total_price) as revenue
+    FROM order_items oi
+    JOIN products p ON oi.product_id = p.id
+    JOIN orders o ON oi.order_id = o.id
+    WHERE o.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) AND o.status = 'completed'
+    GROUP BY p.id, p.name
+    ORDER BY total_sold DESC
+    LIMIT 5
+");
+$topProducts = $topProductsQuery->fetchAll(PDO::FETCH_ASSOC);
+
+// Get recently added products
+$recentProductsQuery = $db->query("
+    SELECT id, name, sku, stock_quantity, created_at
+    FROM products
+    ORDER BY created_at DESC
+    LIMIT 5
+");
+$recentProducts = $recentProductsQuery->fetchAll(PDO::FETCH_ASSOC);
+
+// Get daily sales for last 7 days
+$dailySalesQuery = $db->query("
+    SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as orders,
+        SUM(total_amount) as sales
+    FROM orders
+    WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND status = 'completed'
+    GROUP BY DATE(created_at)
+    ORDER BY date ASC
+");
+$dailySales = $dailySalesQuery->fetchAll(PDO::FETCH_ASSOC);
+
+// Prepare data for charts
+$salesDates = array_map(function($item) { return date('M d', strtotime($item['date'])); }, $dailySales);
+$salesAmounts = array_map(function($item) { return $item['sales']; }, $dailySales);
+$salesOrders = array_map(function($item) { return $item['orders']; }, $dailySales);
+
+$title = 'Staff Dashboard';
+
+ob_start();
+?><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+.dashboard-card {
+    border-radius: 12px;
+    padding: 1.5rem;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+    height: 100%;
+}
+.dashboard-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.stat-icon-lg {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+}
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #dc3545;
+}
+</style>
+<div style="max-height: 95vh; overflow-y: auto;">
+
+<!-- Welcome Section -->
+ <br>
+<div class="mb-4">
+    <h4 class="mb-1">&nbsp;&nbsp;👋 Welcome, <?php echo htmlspecialchars($_SESSION['first_name'] ?? 'Staff'); ?>!</h4>
+    <p class="text-muted mb-0">&nbsp;&nbsp;&nbsp;Here's what's happening with your inventory today.</p>
+</div>
+
+<!-- Key Metrics Row -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="dashboard-card" style="border-left: 4px solid #0d6efd;">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon-lg bg-primary text-white me-3">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0"><?= $inventoryStats['total_products'] ?></h3>
+                    <p class="text-muted mb-0">Total Products</p>
+                    <small class="text-primary"><i class="fas fa-database me-1"></i>Active</small>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-body text-center">
-          <h5>Transactions</h5>
-          <h3 class="text-primary">'.$transactionCount.'</h3>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="dashboard-card" style="border-left: 4px solid #28a745;">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon-lg bg-success text-white me-3">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0"><?= $inventoryStats['in_stock'] ?></h3>
+                    <p class="text-muted mb-0">In Stock</p>
+                    <small class="text-success"><i class="fas fa-arrow-up me-1"></i>Good</small>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-body text-center">
-          <h5>Top Products</h5>
-          <ul class="list-group">'.
-            (count($topProducts) ? implode('', array_map(function($p){
-              return '<li class="list-group-item d-flex justify-content-between align-items-center">'.htmlspecialchars($p['name']).'<span class="badge bg-info">'.$p['qty'].'</span></li>';
-            }, $topProducts)) : '<li class="list-group-item">No sales yet</li>').
-          '</ul>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="dashboard-card" style="border-left: 4px solid #ffc107;">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon-lg bg-warning text-white me-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0"><?= $inventoryStats['low_stock'] ?></h3>
+                    <p class="text-muted mb-0">Low Stock</p>
+                    <small class="text-warning"><i class="fas fa-exclamation me-1"></i>Alert</small>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
-</div>';
-include __DIR__ . '/views/layout.php';
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="dashboard-card" style="border-left: 4px solid #dc3545;">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon-lg bg-danger text-white me-3">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0"><?= $inventoryStats['out_of_stock'] ?></h3>
+                    <p class="text-muted mb-0">Out of Stock</p>
+                    <small class="text-danger"><i class="fas fa-ban me-1"></i>Critical</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sales Overview Row -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="dashboard-card" style="border-left: 4px solid #667eea;">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon-lg bg-primary text-white me-3" style="background-color: #667eea !important;">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0"><?php echo formatCurrency($todayStats['total_sales']); ?></h3>
+                    <p class="text-muted mb-0">Today's Sales</p>
+                    <small class="text-primary"><?= $todayStats['order_count'] ?> orders</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="dashboard-card" style="border-left: 4px solid #f093fb;">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon-lg text-white me-3" style="background-color: #f093fb !important;">
+                    <i class="fas fa-calendar-week"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0"><?php echo formatCurrency($weekStats['total_sales']); ?></h3>
+                    <p class="text-muted mb-0">This Week</p>
+                    <small class="text-info"><?= $weekStats['order_count'] ?> orders</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="dashboard-card" style="border-left: 4px solid #17a2b8;">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon-lg bg-info text-white me-3">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0"><?= $stats['total_orders'] ?></h3>
+                    <p class="text-muted mb-0">Total Orders</p>
+                    <small class="text-info">All time</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="dashboard-card" style="border-left: 4px solid #28a745;">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon-lg bg-success text-white me-3">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0"><?php echo formatCurrency($stats['total_sales']); ?></h3>
+                    <p class="text-muted mb-0">Total Revenue</p>
+                    <small class="text-success">All time</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts removed: Sales Trend and Payment Methods (per request) -->
+
+<!-- Content Row -->
+<div class="row mb-4">
+    <!-- Recent Transactions removed per request -->
+    <!-- Recently Added Stock -->
+    <div class="col-xl-7 mb-3">
+        <div class="dashboard-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="section-title mb-0"><i class="fas fa-plus-circle me-2"></i>Recently Added Stock</h5>
+                <a href="manage_product.php" class="btn btn-outline-danger btn-sm">Manage Products</a>
+            </div>
+            <?php if (empty($recentProducts)): ?>
+                <div class="text-center py-4">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No recently added products</p>
+                </div>
+            <?php else: ?>
+                <div class="list-group list-group-flush">
+                    <?php foreach ($recentProducts as $prod): ?>
+                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                            <div>
+                                <div class="fw-bold"><?php echo htmlspecialchars($prod['name']); ?></div>
+                                <small class="text-muted">SKU: <?php echo htmlspecialchars($prod['sku'] ?? 'N/A'); ?> • Added <?php echo date('M d, Y', strtotime($prod['created_at'])); ?></small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">Qty: <strong><?php echo intval($prod['stock_quantity']); ?></strong></small>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <!-- Top Products -->
+    <div class="col-xl-5 mb-3">
+        <div class="dashboard-card">
+            <h5 class="section-title"><i class="fas fa-fire me-2"></i>Top Selling Products (30 Days)</h5>
+            <?php if (empty($topProducts)): ?>
+                <div class="text-center py-4">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No sales data available</p>
+                </div>
+            <?php else: ?>
+                <div class="list-group list-group-flush">
+                    <?php foreach ($topProducts as $index => $product): ?>
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-weight: bold;">
+                                    <?= $index + 1 ?>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="fw-bold"><?php echo htmlspecialchars($product['name']); ?></div>
+                                <small class="text-muted"><?= $product['total_sold'] ?> units sold</small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold text-success"><?php echo formatCurrency($product['revenue']); ?></div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications Panel removed to avoid duplication with the notification bell -->
+
+<!-- Quick Actions -->
+<!-- <div class="row">
+    <div class="col-12">
+        <div class="dashboard-card">
+            <h5 class="section-title"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <a href="manage_product.php" class="btn btn-outline-danger w-100">
+                        <i class="fas fa-boxes me-2"></i>Manage Inventory
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="inventory_reports.php" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-clipboard-list me-2"></i>Inventory Reports
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="transactions.php" class="btn btn-outline-success w-100">
+                        <i class="fas fa-receipt me-2"></i>Transactions
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="sales.php" class="btn btn-outline-warning w-100">
+                        <i class="fas fa-chart-line me-2"></i>Sales Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> -->
+
+</div>
+
+<!-- Chart JS removed: Sales Trend and Payment Methods (per request) -->
+<?php
+$content = ob_get_clean();
+
+// Include staff layout
+$title = 'Staff Dashboard';
+include 'views/layout.php';
+?>

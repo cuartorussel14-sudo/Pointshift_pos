@@ -1,0 +1,476 @@
+[2025-10-29 21:52:02] POST action=mark_read session_user=9 payload={"action":"mark_read","id":520}
+[2025-10-29 21:52:02] mark_read id=520 by_user=9 result=ok
+[2025-10-29 21:52:11] POST action=mark_read session_user=9 payload={"action":"mark_read","id":521}
+[2025-10-29 21:52:11] mark_read id=521 by_user=9 result=ok
+[2025-10-29 23:08:45] POST action=mark_read session_user=9 payload={"action":"mark_read","id":522}
+[2025-10-29 23:08:45] mark_read id=522 by_user=9 result=ok
+[2025-10-29 23:08:57] POST action=mark_read session_user=9 payload={"action":"mark_read","id":523}
+[2025-10-29 23:08:57] mark_read id=523 by_user=9 result=ok
+[2025-10-30 12:31:46] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"524"}
+[2025-10-30 12:31:46] mark_read id=524 by_user=9 result=ok
+[2025-10-30 12:43:23] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"525"}
+[2025-10-30 12:43:23] mark_read id=525 by_user=9 result=ok
+[2025-10-30 12:43:29] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"526"}
+[2025-10-30 12:43:29] mark_read id=526 by_user=9 result=ok
+[2025-10-30 14:25:27] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-10-30 14:25:27] mark_all_read (user) by_user=7 include_system=1 result=ok
+[2025-10-30 19:34:15] create expiry product_id=14 expiry=2025-10-03 by_user=9
+[2025-10-30 19:34:15] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"528"}
+[2025-10-30 19:34:15] mark_read id=528 by_user=9 result=ok
+[2025-10-30 19:34:28] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-10-30 19:34:28] mark_all_read (admin) by_user=9 result=ok
+[2025-10-30 21:42:46] create added product_id=81 by_user=7 actor_name=russel cuarto
+[2025-10-30 21:43:15] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-10-30 21:43:15] mark_all_read (user) by_user=7 include_system=1 result=ok
+[2025-10-30 22:05:42] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"531"}
+[2025-10-30 22:05:42] mark_read id=531 by_user=9 result=ok
+[2025-10-30 22:05:42] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"530"}
+[2025-10-30 22:05:42] mark_read id=530 by_user=9 result=ok
+[2025-10-30 22:05:47] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-10-30 22:05:47] mark_all_read (admin) by_user=9 result=ok
+[2025-10-30 22:05:58] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"532"}
+[2025-10-30 22:05:58] mark_read id=532 by_user=9 result=ok
+[2025-10-30 22:06:02] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"533"}
+[2025-10-30 22:06:02] mark_read id=533 by_user=9 result=ok
+[2025-10-30 22:06:05] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-10-30 22:06:05] mark_all_read (admin) by_user=9 result=ok
+[2025-10-31 07:30:20] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"534"}
+[2025-10-31 07:30:20] mark_read id=534 by_user=9 result=ok
+[2025-10-31 07:59:14] create added product_id=82 by_user=9 actor_name=admin ko
+[2025-10-31 07:59:14] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"535"}
+[2025-10-31 07:59:14] mark_read id=535 by_user=9 result=ok
+[2025-10-31 18:27:39] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-10-31 18:27:39] mark_all_read (user) by_user=7 include_system=1 result=ok
+[2025-10-31 19:12:47] create expiry_upcoming product_id=21 expiry=2025-11-01 by_user=9
+[2025-10-31 19:12:48] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"536"}
+[2025-10-31 19:12:48] mark_read id=536 by_user=9 result=ok
+[2025-10-31 19:12:48] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"537"}
+[2025-10-31 19:12:48] mark_read id=537 by_user=9 result=ok
+[2025-10-31 19:12:56] create expiry_upcoming product_id=21 expiry=2025-11-01 by_user=9
+[2025-10-31 19:12:56] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"538"}
+[2025-10-31 19:12:56] mark_read id=538 by_user=9 result=ok
+[2025-10-31 19:12:56] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"539"}
+[2025-10-31 19:12:56] mark_read id=539 by_user=9 result=ok
+[2025-10-31 19:13:15] create expiry_upcoming product_id=21 expiry=2025-11-01 by_user=9
+[2025-10-31 19:13:16] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"540"}
+[2025-10-31 19:13:16] mark_read id=540 by_user=9 result=ok
+[2025-10-31 19:13:16] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"541"}
+[2025-10-31 19:13:16] mark_read id=541 by_user=9 result=ok
+[2025-10-31 19:13:52] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"542"}
+[2025-10-31 19:13:52] mark_read id=542 by_user=9 result=ok
+[2025-10-31 19:16:34] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-10-31 19:16:34] mark_all_read (user) by_user=7 include_system=1 result=ok
+[2025-10-31 19:21:27] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"546"}
+[2025-10-31 19:21:27] mark_read id=546 by_user=9 result=ok
+[2025-10-31 19:21:33] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-10-31 19:21:33] mark_all_read (admin) by_user=9 result=ok
+[2025-10-31 19:30:50] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-10-31 19:30:50] mark_all_read (user) by_user=7 include_system=1 result=ok
+[2025-10-31 19:33:57] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"548"}
+[2025-10-31 19:33:57] mark_read id=548 by_user=9 result=ok
+[2025-10-31 19:56:32] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"549"}
+[2025-10-31 19:56:32] mark_read id=549 by_user=9 result=ok
+[2025-10-31 19:57:35] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"550"}
+[2025-10-31 19:57:35] mark_read id=550 by_user=9 result=ok
+[2025-10-31 19:57:41] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"551"}
+[2025-10-31 19:57:41] mark_read id=551 by_user=9 result=ok
+[2025-10-31 19:58:35] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"552"}
+[2025-10-31 19:58:35] mark_read id=552 by_user=9 result=ok
+[2025-10-31 19:58:44] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"553"}
+[2025-10-31 19:58:44] mark_read id=553 by_user=9 result=ok
+[2025-10-31 19:58:49] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-10-31 19:58:49] mark_all_read (admin) by_user=9 result=ok
+[2025-10-31 20:00:02] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"554"}
+[2025-10-31 20:00:02] mark_read id=554 by_user=9 result=ok
+[2025-10-31 20:00:12] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"555"}
+[2025-10-31 20:00:12] mark_read id=555 by_user=9 result=ok
+[2025-10-31 20:00:18] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-10-31 20:00:18] mark_all_read (admin) by_user=9 result=ok
+[2025-10-31 21:52:33] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"557"}
+[2025-10-31 21:52:33] mark_read id=557 by_user=9 result=ok
+[2025-10-31 21:52:33] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"558"}
+[2025-10-31 21:52:33] mark_read id=558 by_user=9 result=ok
+[2025-10-31 21:52:33] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"556"}
+[2025-10-31 21:52:33] mark_read id=556 by_user=9 result=ok
+[2025-10-31 21:52:44] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-10-31 21:52:44] mark_all_read (admin) by_user=9 result=ok
+[2025-10-31 22:16:34] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-10-31 22:16:34] mark_all_read (user) by_user=7 include_system=1 result=ok
+[2025-10-31 22:34:15] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-10-31 22:34:15] mark_all_read (user) by_user=7 include_system=1 result=ok
+[2025-10-31 22:37:05] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"564"}
+[2025-10-31 22:37:05] mark_read id=564 by_user=9 result=ok
+[2025-10-31 22:50:41] create expiry_upcoming product_id=66 expiry=2025-10-31 by_user=9
+[2025-10-31 22:50:41] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"565"}
+[2025-10-31 22:50:41] mark_read id=565 by_user=9 result=ok
+[2025-10-31 23:01:12] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"566"}
+[2025-10-31 23:01:12] mark_read id=566 by_user=9 result=ok
+[2025-10-31 23:08:14] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"567"}
+[2025-10-31 23:08:14] mark_read id=567 by_user=9 result=ok
+[2025-10-31 23:10:58] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"568"}
+[2025-10-31 23:10:58] mark_read id=568 by_user=9 result=ok
+[2025-10-31 23:20:32] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"569"}
+[2025-10-31 23:20:32] mark_read id=569 by_user=9 result=ok
+[2025-10-31 23:26:12] create updated product_id=79 by_user=7 actor_name=russel cuarto
+[2025-10-31 23:26:33] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"570"}
+[2025-10-31 23:26:33] mark_read id=570 by_user=9 result=ok
+[2025-10-31 23:34:18] create updated product_id=77 by_user=7 actor_name=russel cuarto
+[2025-10-31 23:34:22] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"571"}
+[2025-10-31 23:34:22] mark_read id=571 by_user=9 result=ok
+[2025-10-31 23:42:46] create updated product_id=77 by_user=7 actor_name=russel cuarto
+[2025-10-31 23:42:55] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"572"}
+[2025-10-31 23:42:55] mark_read id=572 by_user=9 result=ok
+[2025-10-31 23:43:02] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-10-31 23:43:02] mark_all_read (admin) by_user=9 result=ok
+[2025-10-31 23:44:31] create updated product_id=78 by_user=7 actor_name=russel cuarto
+[2025-10-31 23:44:40] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"573"}
+[2025-10-31 23:44:40] mark_read id=573 by_user=9 result=ok
+[2025-10-31 23:44:40] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"574"}
+[2025-10-31 23:44:40] mark_read id=574 by_user=9 result=ok
+[2025-10-31 23:46:37] create updated product_id=78 by_user=7 actor_name=russel cuarto
+[2025-10-31 23:46:47] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"575"}
+[2025-10-31 23:46:47] mark_read id=575 by_user=9 result=ok
+[2025-10-31 23:47:00] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-10-31 23:47:00] mark_all_read (admin) by_user=9 result=ok
+[2025-10-31 23:51:30] create updated product_id=73 by_user=7 actor_name=russel cuarto
+[2025-10-31 23:51:43] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-10-31 23:51:43] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 00:08:08] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 00:08:08] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 00:11:07] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"578"}
+[2025-11-01 00:11:07] mark_read id=578 by_user=9 result=ok
+[2025-11-01 01:20:42] create updated product_id=78 by_user=7 actor_name=russel cuarto
+[2025-11-01 01:20:54] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 01:20:54] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 01:26:58] create expiry_upcoming product_id=21 expiry=2025-11-01 by_user=9
+[2025-11-01 01:26:59] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"580"}
+[2025-11-01 01:26:59] mark_read id=580 by_user=9 result=ok
+[2025-11-01 01:26:59] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"581"}
+[2025-11-01 01:26:59] mark_read id=581 by_user=9 result=ok
+[2025-11-01 01:26:59] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"582"}
+[2025-11-01 01:26:59] mark_read id=582 by_user=9 result=ok
+[2025-11-01 01:27:09] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-01 01:27:09] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 07:32:53] create updated product_id=81 by_user=7 actor_name=russel cuarto
+[2025-11-01 07:34:10] create updated product_id=81 by_user=7 actor_name=russel cuarto
+[2025-11-01 07:34:23] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 07:34:23] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 07:36:25] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"585"}
+[2025-11-01 07:36:25] mark_read id=585 by_user=9 result=ok
+[2025-11-01 07:36:25] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"586"}
+[2025-11-01 07:36:25] mark_read id=586 by_user=9 result=ok
+[2025-11-01 07:36:44] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 07:36:44] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 07:37:37] create expiry_upcoming product_id=13 expiry=2025-11-03 by_user=9
+[2025-11-01 07:37:38] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"587"}
+[2025-11-01 07:37:38] mark_read id=587 by_user=9 result=ok
+[2025-11-01 07:37:38] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"588"}
+[2025-11-01 07:37:38] mark_read id=588 by_user=9 result=ok
+[2025-11-01 10:59:34] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"589"}
+[2025-11-01 10:59:34] mark_read id=589 by_user=9 result=ok
+[2025-11-01 10:59:50] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"590"}
+[2025-11-01 10:59:50] mark_read id=590 by_user=9 result=ok
+[2025-11-01 10:59:50] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"591"}
+[2025-11-01 10:59:50] mark_read id=591 by_user=9 result=ok
+[2025-11-01 10:59:57] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-01 10:59:57] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 17:12:25] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"592"}
+[2025-11-01 17:12:25] mark_read id=592 by_user=9 result=ok
+[2025-11-01 17:12:36] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"593"}
+[2025-11-01 17:12:36] mark_read id=593 by_user=9 result=ok
+[2025-11-01 17:12:47] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-01 17:12:47] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 17:12:54] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"594"}
+[2025-11-01 17:12:54] mark_read id=594 by_user=9 result=ok
+[2025-11-01 17:13:14] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-01 17:13:14] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 17:13:44] create expiry_upcoming product_id=13 expiry=2025-11-03 by_user=9
+[2025-11-01 17:13:45] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"595"}
+[2025-11-01 17:13:45] mark_read id=595 by_user=9 result=ok
+[2025-11-01 17:13:45] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"596"}
+[2025-11-01 17:13:45] mark_read id=596 by_user=9 result=ok
+[2025-11-01 17:13:45] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"597"}
+[2025-11-01 17:13:45] mark_read id=597 by_user=9 result=ok
+[2025-11-01 17:13:55] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-01 17:13:55] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 17:14:13] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"598"}
+[2025-11-01 17:14:13] mark_read id=598 by_user=9 result=ok
+[2025-11-01 17:14:13] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"599"}
+[2025-11-01 17:14:13] mark_read id=599 by_user=9 result=ok
+[2025-11-01 18:45:19] create expiry_upcoming product_id=71 expiry=2025-11-04 by_user=9
+[2025-11-01 18:45:20] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"600"}
+[2025-11-01 18:45:20] mark_read id=600 by_user=9 result=ok
+[2025-11-01 18:45:20] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"601"}
+[2025-11-01 18:45:20] mark_read id=601 by_user=9 result=ok
+[2025-11-01 18:45:20] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"602"}
+[2025-11-01 18:45:20] mark_read id=602 by_user=9 result=ok
+[2025-11-01 18:45:30] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-01 18:45:30] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 20:06:10] create added product_id=83 by_user=7 actor_name=russel cuarto
+[2025-11-01 20:06:22] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 20:06:22] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 20:49:21] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 20:49:21] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 20:49:38] create updated product_id=83 by_user=7 actor_name=russel cuarto
+[2025-11-01 20:50:51] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 20:50:51] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 21:02:21] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 21:02:21] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 21:13:02] create expiry product_id=14 expiry=2025-11-01 by_user=9
+[2025-11-01 21:13:02] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"613"}
+[2025-11-01 21:13:02] mark_read id=613 by_user=9 result=ok
+[2025-11-01 21:13:02] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"614"}
+[2025-11-01 21:13:02] mark_read id=614 by_user=9 result=ok
+[2025-11-01 21:13:02] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"615"}
+[2025-11-01 21:13:02] mark_read id=615 by_user=9 result=ok
+[2025-11-01 21:15:53] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"616"}
+[2025-11-01 21:15:53] mark_read id=616 by_user=9 result=ok
+[2025-11-01 21:15:53] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"617"}
+[2025-11-01 21:15:53] mark_read id=617 by_user=9 result=ok
+[2025-11-01 21:17:30] create updated product_id=83 by_user=7 actor_name=russel cuarto
+[2025-11-01 21:17:38] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 21:17:38] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 21:22:03] create updated product_id=83 by_user=7 actor_name=russel cuarto
+[2025-11-01 21:22:33] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 21:22:33] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 21:22:52] create updated product_id=82 by_user=7 actor_name=russel cuarto
+[2025-11-01 21:23:48] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 21:23:48] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 21:24:01] create updated product_id=81 by_user=7 actor_name=russel cuarto
+[2025-11-01 21:24:20] create updated product_id=78 by_user=7 actor_name=russel cuarto
+[2025-11-01 21:40:12] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"623"}
+[2025-11-01 21:40:12] mark_read id=623 by_user=9 result=ok
+[2025-11-01 21:40:12] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"624"}
+[2025-11-01 21:40:12] mark_read id=624 by_user=9 result=ok
+[2025-11-01 21:40:12] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"626"}
+[2025-11-01 21:40:12] mark_read id=626 by_user=9 result=ok
+[2025-11-01 21:40:12] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"625"}
+[2025-11-01 21:40:12] mark_read id=625 by_user=9 result=ok
+[2025-11-01 21:40:12] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"622"}
+[2025-11-01 21:40:12] mark_read id=622 by_user=9 result=ok
+[2025-11-01 21:40:12] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"621"}
+[2025-11-01 21:40:12] mark_read id=621 by_user=9 result=ok
+[2025-11-01 21:41:44] create expiry_upcoming product_id=14 expiry=2025-11-01 by_user=9
+[2025-11-01 21:41:45] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"627"}
+[2025-11-01 21:41:45] mark_read id=627 by_user=9 result=ok
+[2025-11-01 21:41:45] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"628"}
+[2025-11-01 21:41:45] mark_read id=628 by_user=9 result=ok
+[2025-11-01 21:41:53] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-01 21:41:53] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 21:54:28] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 21:54:28] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 21:55:03] create updated product_id=80 by_user=7 actor_name=russel cuarto
+[2025-11-01 22:06:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"631"}
+[2025-11-01 22:06:21] mark_read id=631 by_user=9 result=ok
+[2025-11-01 22:06:31] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-01 22:06:31] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 22:15:26] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"632"}
+[2025-11-01 22:15:26] mark_read id=632 by_user=9 result=ok
+[2025-11-01 22:15:26] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"633"}
+[2025-11-01 22:15:26] mark_read id=633 by_user=9 result=ok
+[2025-11-01 22:15:33] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-01 22:15:33] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 22:15:48] create expiry_upcoming product_id=14 expiry=2025-11-01 by_user=9
+[2025-11-01 22:15:48] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"634"}
+[2025-11-01 22:15:48] mark_read id=634 by_user=9 result=ok
+[2025-11-01 22:15:48] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"635"}
+[2025-11-01 22:15:48] mark_read id=635 by_user=9 result=ok
+[2025-11-01 22:15:48] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"636"}
+[2025-11-01 22:15:48] mark_read id=636 by_user=9 result=ok
+[2025-11-01 22:16:07] create expiry_upcoming product_id=14 expiry=2025-11-01 by_user=9
+[2025-11-01 22:16:08] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"637"}
+[2025-11-01 22:16:08] mark_read id=637 by_user=9 result=ok
+[2025-11-01 22:16:08] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"638"}
+[2025-11-01 22:16:08] mark_read id=638 by_user=9 result=ok
+[2025-11-01 22:16:08] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"639"}
+[2025-11-01 22:16:08] mark_read id=639 by_user=9 result=ok
+[2025-11-01 22:16:17] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-01 22:16:17] mark_all_read (admin) by_user=9 result=ok
+[2025-11-01 22:17:04] create updated product_id=83 by_user=7 actor_name=russel cuarto
+[2025-11-01 22:17:17] POST action=mark_all_read session_user=7 payload={"action":"mark_all_read","include_system":true}
+[2025-11-01 22:17:17] mark_all_read (staff) by_user=7 result=ok
+[2025-11-01 22:17:35] create updated product_id=83 by_user=7 actor_name=russel cuarto
+[2025-11-01 22:24:11] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"642"}
+[2025-11-01 22:24:11] mark_read id=642 by_user=9 result=ok
+[2025-11-01 22:24:30] create deleted product_id=14 by_user=9 actor_name=admin ko
+[2025-11-01 22:24:30] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"643"}
+[2025-11-01 22:24:30] mark_read id=643 by_user=9 result=ok
+[2025-11-01 22:32:19] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"644"}
+[2025-11-01 22:32:19] mark_read id=644 by_user=9 result=ok
+[2025-11-01 22:53:02] create updated product_id=83 by_user=7 actor_name=russel cuarto
+[2025-11-01 22:53:14] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"645"}
+[2025-11-01 22:53:14] mark_read id=645 by_user=9 result=ok
+[2025-11-01 22:53:28] create expiry_upcoming product_id=65 expiry=2025-11-03 by_user=9
+[2025-11-01 22:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"646"}
+[2025-11-01 22:53:28] mark_read id=646 by_user=9 result=ok
+[2025-11-01 22:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"647"}
+[2025-11-01 22:53:28] mark_read id=647 by_user=9 result=ok
+[2025-11-02 07:26:01] create expiry_upcoming product_id=21 expiry=2025-11-04 by_user=9
+[2025-11-02 07:26:01] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"528"}
+[2025-11-02 07:26:01] mark_read id=528 by_user=9 result=ok
+[2025-11-02 07:26:01] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"529"}
+[2025-11-02 07:26:01] mark_read id=529 by_user=9 result=ok
+[2025-11-02 07:26:01] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"530"}
+[2025-11-02 07:26:01] mark_read id=530 by_user=9 result=ok
+[2025-11-02 07:29:30] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"531"}
+[2025-11-02 07:29:30] mark_read id=531 by_user=9 result=ok
+[2025-11-02 07:29:30] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"532"}
+[2025-11-02 07:29:30] mark_read id=532 by_user=9 result=ok
+[2025-11-02 07:35:39] create deleted product_id=14 by_user=9 actor_name=admin ko
+[2025-11-02 07:35:39] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"531"}
+[2025-11-02 07:35:39] mark_read id=531 by_user=9 result=ok
+[2025-11-02 07:38:07] create deleted product_id=14 by_user=9 actor_name=admin ko
+[2025-11-02 07:38:07] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"531"}
+[2025-11-02 07:38:07] mark_read id=531 by_user=9 result=ok
+[2025-11-02 07:38:15] create deleted product_id=59 by_user=9 actor_name=admin ko
+[2025-11-02 07:38:15] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"532"}
+[2025-11-02 07:38:15] mark_read id=532 by_user=9 result=ok
+[2025-11-02 07:38:23] create deleted product_id=21 by_user=9 actor_name=admin ko
+[2025-11-02 07:38:24] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"533"}
+[2025-11-02 07:38:24] mark_read id=533 by_user=9 result=ok
+[2025-11-02 07:43:27] create deleted product_id=14 by_user=9 actor_name=admin ko
+[2025-11-02 07:43:27] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"531"}
+[2025-11-02 07:43:27] mark_read id=531 by_user=9 result=ok
+[2025-11-02 07:43:34] create deleted product_id=59 by_user=9 actor_name=admin ko
+[2025-11-02 07:43:34] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"532"}
+[2025-11-02 07:43:34] mark_read id=532 by_user=9 result=ok
+[2025-11-02 07:43:41] create deleted product_id=21 by_user=9 actor_name=admin ko
+[2025-11-02 07:43:41] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"533"}
+[2025-11-02 07:43:41] mark_read id=533 by_user=9 result=ok
+[2025-11-02 08:00:28] create expiry product_id=14 expiry=2025-10-01 by_user=9
+[2025-11-02 08:00:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"531"}
+[2025-11-02 08:00:28] mark_read id=531 by_user=9 result=ok
+[2025-11-03 14:54:10] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"532"}
+[2025-11-03 14:54:10] mark_read id=532 by_user=9 result=ok
+[2025-11-03 15:02:31] create deleted product_id=14 by_user=9 actor_name=admin ko
+[2025-11-03 15:02:31] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"533"}
+[2025-11-03 15:02:31] mark_read id=533 by_user=9 result=ok
+[2025-11-03 15:04:39] create low_stock product_id=81 by_user=9
+[2025-11-03 15:04:39] create added product_id=81 by_user=9 actor_name=admin ko
+[2025-11-03 15:04:39] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"533"}
+[2025-11-03 15:04:39] mark_read id=533 by_user=9 result=ok
+[2025-11-03 15:04:39] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"534"}
+[2025-11-03 15:04:39] mark_read id=534 by_user=9 result=ok
+[2025-11-03 19:38:17] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"535"}
+[2025-11-03 19:38:17] mark_read id=535 by_user=9 result=ok
+[2025-11-03 21:54:20] create added product_id=82 by_user=7 actor_name=russel cuarto
+[2025-11-03 22:33:34] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"537"}
+[2025-11-03 22:33:34] mark_read id=537 by_user=9 result=ok
+[2025-11-03 22:33:34] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"536"}
+[2025-11-03 22:33:34] mark_read id=536 by_user=9 result=ok
+[2025-11-04 05:35:29] create low_stock product_id=83 by_user=7
+[2025-11-04 05:35:29] create added product_id=83 by_user=7 actor_name=russel cuarto
+[2025-11-04 05:37:31] create low_stock product_id=84 by_user=7
+[2025-11-04 05:37:31] create added product_id=84 by_user=7 actor_name=russel cuarto
+[2025-11-04 05:41:16] create updated product_id=81 by_user=7 actor_name=russel cuarto
+[2025-11-04 05:41:43] create updated product_id=83 by_user=7 actor_name=russel cuarto
+[2025-11-04 05:42:38] create updated product_id=84 by_user=7 actor_name=russel cuarto
+[2025-11-04 05:43:00] create updated product_id=83 by_user=7 actor_name=russel cuarto
+[2025-11-04 05:46:03] create updated product_id=84 by_user=7 actor_name=russel cuarto
+[2025-11-04 05:52:05] create low_stock product_id=85 by_user=7
+[2025-11-04 05:52:05] create added product_id=85 by_user=7 actor_name=russel cuarto
+[2025-11-04 05:52:29] create updated product_id=85 by_user=7 actor_name=russel cuarto
+[2025-11-04 05:52:55] create updated product_id=85 by_user=7 actor_name=russel cuarto
+[2025-11-04 05:53:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"560"}
+[2025-11-04 05:53:21] mark_read id=560 by_user=9 result=ok
+[2025-11-04 05:53:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"558"}
+[2025-11-04 05:53:21] mark_read id=558 by_user=9 result=ok
+[2025-11-04 05:53:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"556"}
+[2025-11-04 05:53:21] mark_read id=556 by_user=9 result=ok
+[2025-11-04 05:53:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"559"}
+[2025-11-04 05:53:21] mark_read id=559 by_user=9 result=ok
+[2025-11-04 05:53:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"557"}
+[2025-11-04 05:53:21] mark_read id=557 by_user=9 result=ok
+[2025-11-04 05:53:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"554"}
+[2025-11-04 05:53:21] mark_read id=554 by_user=9 result=ok
+[2025-11-04 05:53:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"551"}
+[2025-11-04 05:53:21] mark_read id=551 by_user=9 result=ok
+[2025-11-04 05:53:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"553"}
+[2025-11-04 05:53:21] mark_read id=553 by_user=9 result=ok
+[2025-11-04 05:53:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"555"}
+[2025-11-04 05:53:21] mark_read id=555 by_user=9 result=ok
+[2025-11-04 05:53:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"552"}
+[2025-11-04 05:53:21] mark_read id=552 by_user=9 result=ok
+[2025-11-04 05:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"547"}
+[2025-11-04 05:53:28] mark_read id=547 by_user=9 result=ok
+[2025-11-04 05:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"544"}
+[2025-11-04 05:53:28] mark_read id=544 by_user=9 result=ok
+[2025-11-04 05:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"549"}
+[2025-11-04 05:53:28] mark_read id=549 by_user=9 result=ok
+[2025-11-04 05:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"548"}
+[2025-11-04 05:53:28] mark_read id=548 by_user=9 result=ok
+[2025-11-04 05:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"550"}
+[2025-11-04 05:53:28] mark_read id=550 by_user=9 result=ok
+[2025-11-04 05:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"546"}
+[2025-11-04 05:53:28] mark_read id=546 by_user=9 result=ok
+[2025-11-04 05:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"542"}
+[2025-11-04 05:53:28] mark_read id=542 by_user=9 result=ok
+[2025-11-04 05:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"541"}
+[2025-11-04 05:53:28] mark_read id=541 by_user=9 result=ok
+[2025-11-04 05:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"545"}
+[2025-11-04 05:53:28] mark_read id=545 by_user=9 result=ok
+[2025-11-04 05:53:28] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"543"}
+[2025-11-04 05:53:28] mark_read id=543 by_user=9 result=ok
+[2025-11-04 05:53:43] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"540"}
+[2025-11-04 05:53:43] mark_read id=540 by_user=9 result=ok
+[2025-11-04 05:53:43] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"539"}
+[2025-11-04 05:53:43] mark_read id=539 by_user=9 result=ok
+[2025-11-04 05:53:43] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"538"}
+[2025-11-04 05:53:43] mark_read id=538 by_user=9 result=ok
+[2025-11-04 15:17:38] create deleted product_id=14 by_user=9 actor_name=admin ko
+[2025-11-04 15:17:38] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"561"}
+[2025-11-04 15:17:38] mark_read id=561 by_user=9 result=ok
+[2025-11-04 15:20:47] create low_stock product_id=81 by_user=9
+[2025-11-04 15:20:47] create added product_id=81 by_user=9 actor_name=admin ko
+[2025-11-04 15:20:48] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"533"}
+[2025-11-04 15:20:48] mark_read id=533 by_user=9 result=ok
+[2025-11-04 15:20:48] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"534"}
+[2025-11-04 15:20:48] mark_read id=534 by_user=9 result=ok
+[2025-11-05 15:24:54] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"535"}
+[2025-11-05 15:24:54] mark_read id=535 by_user=9 result=ok
+[2025-11-05 15:25:11] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"536"}
+[2025-11-05 15:25:11] mark_read id=536 by_user=9 result=ok
+[2025-11-05 17:58:04] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"542"}
+[2025-11-05 17:58:04] mark_read id=542 by_user=9 result=ok
+[2025-11-05 17:58:04] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"543"}
+[2025-11-05 17:58:04] mark_read id=543 by_user=9 result=ok
+[2025-11-05 17:58:04] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"540"}
+[2025-11-05 17:58:04] mark_read id=540 by_user=9 result=ok
+[2025-11-05 17:58:04] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"537"}
+[2025-11-05 17:58:04] mark_read id=537 by_user=9 result=ok
+[2025-11-05 17:58:04] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"541"}
+[2025-11-05 17:58:04] mark_read id=541 by_user=9 result=ok
+[2025-11-05 17:58:04] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"538"}
+[2025-11-05 17:58:04] mark_read id=538 by_user=9 result=ok
+[2025-11-05 17:58:04] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"539"}
+[2025-11-05 17:58:04] mark_read id=539 by_user=9 result=ok
+[2025-11-06 00:00:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"553"}
+[2025-11-06 00:00:21] mark_read id=553 by_user=9 result=ok
+[2025-11-06 00:00:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"554"}
+[2025-11-06 00:00:21] mark_read id=554 by_user=9 result=ok
+[2025-11-06 00:00:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"551"}
+[2025-11-06 00:00:21] mark_read id=551 by_user=9 result=ok
+[2025-11-06 00:00:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"552"}
+[2025-11-06 00:00:21] mark_read id=552 by_user=9 result=ok
+[2025-11-06 00:00:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"549"}
+[2025-11-06 00:00:21] mark_read id=549 by_user=9 result=ok
+[2025-11-06 00:00:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"550"}
+[2025-11-06 00:00:21] mark_read id=550 by_user=9 result=ok
+[2025-11-06 00:00:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"547"}
+[2025-11-06 00:00:21] mark_read id=547 by_user=9 result=ok
+[2025-11-06 00:00:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"548"}
+[2025-11-06 00:00:21] mark_read id=548 by_user=9 result=ok
+[2025-11-06 00:00:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"544"}
+[2025-11-06 00:00:21] mark_read id=544 by_user=9 result=ok
+[2025-11-06 00:00:21] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"545"}
+[2025-11-06 00:00:21] mark_read id=545 by_user=9 result=ok
+[2025-11-06 00:00:23] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"546"}
+[2025-11-06 00:00:23] mark_read id=546 by_user=9 result=ok
+[2025-11-06 08:16:11] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"557"}
+[2025-11-06 08:16:11] mark_read id=557 by_user=9 result=ok
+[2025-11-06 08:16:11] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"556"}
+[2025-11-06 08:16:11] mark_read id=556 by_user=9 result=ok
+[2025-11-06 08:16:11] POST action=mark_read session_user=9 payload={"action":"mark_read","id":"555"}
+[2025-11-06 08:16:11] mark_read id=555 by_user=9 result=ok
+[2025-11-06 08:16:17] POST action=mark_all_read session_user=9 payload={"action":"mark_all_read"}
+[2025-11-06 08:16:17] mark_all_read (admin) by_user=9 result=ok

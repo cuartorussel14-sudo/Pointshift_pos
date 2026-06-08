@@ -1,0 +1,2 @@
+[2025-10-30 12:30:59] manage_product:update created upcoming expiry notif for product_id=66, expiry=2025-10-31, days=1
+[2025-10-31 19:15:06] manage_product:update created upcoming expiry notif for product_id=80, expiry=2025-11-01, days=1

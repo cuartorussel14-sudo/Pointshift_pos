@@ -2,7 +2,7 @@
 require_once '../config.php';
 requireLogin();
 
-$page_title = 'Email Admin';
+$title = 'Email Admin';
 $user_id = $_SESSION['user_id'];
 
 // Handle sending new message
@@ -62,14 +62,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         
         if ($recipient_email_final) {
-            // Store message in database
+            // Store message in database only if sending to internal user
+            if ($recipient_id) {
             $stmt = $conn->prepare("INSERT INTO messages (sender_id, recipient_id, subject, message, parent_message_id) VALUES (?, ?, ?, ?, ?)");
             $stmt->bind_param("iissi", $user_id, $recipient_id, $subject, $message_text, $parent_id);
-            $stmt->execute();
+                $stmt->execute();
+            }
             
             // Send email notification
-            require_once __DIR__ . '/../classes/Mailer.php';
-            $sender_name = ($_SESSION['first_name'] ?? 'Cashier') . ' ' . ($_SESSION['last_name'] ?? '');
+                require_once __DIR__ . '/../classes/Mailer.php';
+            $sender_name = ($_SESSION['first_name'] ?? 'Staff') . ' ' . ($_SESSION['last_name'] ?? '');
             $emailSub = "Message from " . $sender_name . ": " . ($subject ?: 'New message');
             $excerpt = htmlspecialchars(substr($message_text, 0, 300));
             
@@ -100,11 +102,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     } else {
                         $message = "Message sent successfully to " . htmlspecialchars($recipient_email_final) . "!";
                         $message_type = "success";
-                    }
-                } else {
+                }
+            } else {
                     $message = "Message saved but email delivery failed. Check email configuration.";
                     $message_type = "warning";
-                }
+            }
         } else {
             $message = "Invalid email address or no recipient found!";
             $message_type = "danger";
@@ -132,6 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 if ($del->execute()) {
                     $message = 'Message deleted successfully.';
                     $message_type = 'success';
+                    // clear selected conversation if it was deleted
                     if (isset($_POST['conversation_id']) && $_POST['conversation_id'] == $message_id) {
                         unset($_GET['conversation_id']);
                         $selected_conversation = null;

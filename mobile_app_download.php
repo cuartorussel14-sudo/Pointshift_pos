@@ -1,7 +1,7 @@
 <?php
 require_once '../config.php';
 User::requireLogin();
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'cashier') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'staff') {
     header('Location: ../login.php');
     exit();
 }
@@ -81,7 +81,7 @@ ob_start();
             </div>
 
             <div class="mt-3">
-                <a href="mobile_scanner.php" class="btn btn-secondary">Back to Scanner</a>
+                <a href="barcode_scanner.php" class="btn btn-secondary">Back to Scanner</a>
             </div>
         </div>
     </div>

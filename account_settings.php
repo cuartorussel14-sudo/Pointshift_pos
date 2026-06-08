@@ -2,8 +2,8 @@
 require_once '../config.php';
 User::requireLogin();
 
-// Check if user is cashier
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'cashier') {
+// Check if user is staff
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'staff') {
     header('Location: ../login.php');
     exit();
 }
@@ -20,43 +20,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Update Profile
     if ($action === 'update_profile') {
-        $username = trim($_POST['username']);
         $email = trim($_POST['email']);
         $first_name = trim($_POST['first_name']);
         $last_name = trim($_POST['last_name']);
-
-        // Check if username is already taken by another user
-        $check_username_stmt = $conn->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
-        $check_username_stmt->bind_param("si", $username, $current_user_id);
-        $check_username_stmt->execute();
-        $username_result = $check_username_stmt->get_result();
-
-        if ($username_result->num_rows > 0) {
-            $message = "Username is already taken by another user.";
+        
+        // Check if email is already taken by another user
+        $check_stmt = $conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+        $check_stmt->bind_param("si", $email, $current_user_id);
+        $check_stmt->execute();
+        $result = $check_stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            $message = "Email is already taken by another user.";
             $message_type = "danger";
         } else {
-            // Check if email is already taken by another user
-            $check_email_stmt = $conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
-            $check_email_stmt->bind_param("si", $email, $current_user_id);
-            $check_email_stmt->execute();
-            $email_result = $check_email_stmt->get_result();
-
-            if ($email_result->num_rows > 0) {
-                $message = "Email is already taken by another user.";
-                $message_type = "danger";
+            $stmt = $conn->prepare("UPDATE users SET email=?, first_name=?, last_name=? WHERE id=?");
+            $stmt->bind_param("sssi", $email, $first_name, $last_name, $current_user_id);
+            
+            if ($stmt->execute()) {
+                // Update session variables
+                $_SESSION['user_name'] = $first_name . ' ' . $last_name;
+                $message = "Profile updated successfully!";
+                $message_type = "success";
             } else {
-                $stmt = $conn->prepare("UPDATE users SET username=?, email=?, first_name=?, last_name=? WHERE id=?");
-                $stmt->bind_param("ssssi", $username, $email, $first_name, $last_name, $current_user_id);
-
-                if ($stmt->execute()) {
-                    // Update session variables
-                    $_SESSION['user_name'] = $first_name . ' ' . $last_name;
-                    $message = "Profile updated successfully!";
-                    $message_type = "success";
-                } else {
-                    $message = "Error updating profile.";
-                    $message_type = "danger";
-                }
+                $message = "Error updating profile.";
+                $message_type = "danger";
             }
         }
     }
@@ -239,8 +227,9 @@ ob_start();
                     <input type="email" class="form-control" name="email" value="<?php echo htmlspecialchars($user_data['email']); ?>" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Username *</label>
-                    <input type="text" class="form-control" name="username" value="<?php echo htmlspecialchars($user_data['username']); ?>" required>
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($user_data['username']); ?>" readonly disabled>
+                    <small class="text-muted">Username cannot be changed</small>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Role</label>
@@ -336,7 +325,7 @@ if (window.location.hash) {
 </script>
 
 <script>
-// Password visibility toggles for cashier account settings
+// Password visibility toggles for staff account settings
 document.addEventListener('DOMContentLoaded', function(){
     var toggles = [
         {btnId: 'toggleCurrentPassword', inputId: 'current_password', iconId: 'toggleCurrentPasswordIcon'},

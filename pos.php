@@ -1,1174 +1,637 @@
 <?php
 require_once '../config.php';
-User::requireLogin();
+requireLogin();
 
-// Redirect admin to admin panel
-if (User::isAdmin()) {
-    header('Location: ../pos.php');
-    exit();
+$page_title = 'Point of Sale';
+
+// Add necessary CSS and JS to the layout
+$additionalCss = [
+    '/point-shift_pos-system/assets/css/notifications.css'
+];
+$additionalJs = [
+    '/point-shift_pos-system/assets/js/pos-notifications.js'
+];
+
+// Get product data for POS
+$db = Database::getInstance()->getConnection();
+
+// Get all active products with category names
+$stmt = $db->prepare("
+    SELECT p.*, c.name as category_name 
+    FROM products p 
+    LEFT JOIN categories c ON p.category_id = c.id 
+    WHERE p.status = 'active' AND p.stock_quantity > 0 
+    ORDER BY p.name ASC
+");
+$stmt->execute();
+$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get product categories
+$stmt = $db->prepare("SELECT DISTINCT c.name FROM categories c JOIN products p ON c.id = p.category_id WHERE p.status = 'active' ORDER BY c.name ASC");
+$stmt->execute();
+$categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+// Helper function for currency formatting
+function formatCurrency($amount) {
+    return '₱' . number_format($amount, 2);
 }
-
-$posController = new POSController();
-
-// Handle GET request for GCash QR Code
-if (isset($_GET['action']) && $_GET['action'] === 'get_gcash_qr') {
-    header('Content-Type: application/json');
-    $db = Database::getInstance()->getConnection();
-    $stmt = $db->prepare("SELECT qr_code_path FROM payment_qrcodes WHERE payment_method = ? AND is_active = 1 LIMIT 1");
-    $stmt->execute(['gcash']);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if ($row && !empty($row['qr_code_path'])) {
-        echo json_encode([
-            'success' => true,
-            'qr_code_path' => $row['qr_code_path']
-        ]);
-    } else {
-        echo json_encode([
-            'success' => false,
-            'message' => 'No QR code found'
-        ]);
-    }
-    exit();
-}
-
-// Handle AJAX requests
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    header('Content-Type: application/json');
-    
-    switch ($_POST['action']) {
-        case 'complete_sale':
-            $items = json_decode($_POST['items'], true);
-            $amount_received = floatval($_POST['amount_received']);
-            $payment_method = $_POST['payment_method'] ?? 'cash';
-            $discount_percent = floatval($_POST['discount_percent'] ?? 0);
-            $result = $posController->createOrder($items, $payment_method, $amount_received, $discount_percent);
-            echo json_encode($result);
-            exit();
-            
-        case 'get_product':
-            $product = $posController->getProductById($_POST['product_id']);
-            echo json_encode($product);
-            exit();
-
-            case 'get_product_by_barcode':
-                $barcode = $_POST['barcode'] ?? '';
-                $product = $posController->getProductByBarcode($barcode);
-                echo json_encode($product);
-                exit();
-    }
-}
-
-$search = $_GET['search'] ?? '';
-$category = $_GET['category'] ?? '';
-$products = $posController->getProducts($search, $category);
-$categories = $posController->getCategories();
-
-// Handle GET request for product search (AJAX suggestions)
-if (isset($_GET['action']) && $_GET['action'] === 'search_products') {
-    header('Content-Type: application/json');
-    $q = trim($_GET['q'] ?? '');
-    try {
-        $matches = $posController->getProducts($q, '');
-        $results = array_map(function($p){
-            return [
-                'id' => $p['id'] ?? null,
-                'name' => $p['name'] ?? ($p['product_name'] ?? ''),
-                'price' => isset($p['price']) ? (float)$p['price'] : 0,
-                'stock_quantity' => isset($p['stock_quantity']) ? (int)$p['stock_quantity'] : 0,
-                'barcode' => $p['barcode'] ?? ($p['sku'] ?? '')
-            ];
-        }, array_slice($matches ?? [], 0, 20));
-        echo json_encode(['success' => true, 'results' => $results]);
-    } catch (Throwable $e) {
-        echo json_encode(['success' => false, 'message' => 'Search failed']);
-    }
-    exit();
-}
-
-$title = 'Point of Sale';
 
 ob_start();
 ?>
 
+<style>
+/* Receipt Print Styles */
+@media print {
+    body * { visibility: hidden; }
+    .receipt-print, .receipt-print * { visibility: visible; }
+    .receipt-print {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.2;
+    }
+    .no-print { display: none !important; }
+}
+
+.product-grid {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.product-card {
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.product-card:hover {
+    border-color: #dc3545;
+    transform: translateY(-2px);
+}
+
+.cart-section {
+    background: #f8f9fa;
+    border-radius: 10px;
+    max-height: 600px;
+}
+
+.cart-items {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.receipt-print {
+    display: none;
+    font-family: 'Courier New', monospace;
+    line-height: 1.2;
+    font-size: 12px;
+}
+
+.total-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+</style>
+
 <div class="row">
-    <!-- Left: Cart -->
-    <div class="col-lg-8 order-lg-1">
-        <div class="card h-100">
-            <div class="card-header py-2">
-                <div class="d-flex align-items-center gap-2">
-                    <h6 class="mb-0 me-auto">Shopping Cart</h6>
-                    <div class="input-group input-group-sm position-relative" style="max-width: 420px;">
-                        <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
-                        <input type="text" id="product-search" class="form-control" placeholder="Search inventory by name, code, or barcode..." autocomplete="off" value="<?php echo htmlspecialchars($search); ?>">
-                        <button id="openMobileScannerBtn" class="btn btn-outline-primary" title="Open mobile scanner"><i class="fas fa-mobile-alt"></i></button>
-                        <button id="showMobileQRBtn" class="btn btn-outline-secondary" title="Show QR for mobile"><i class="fas fa-qrcode"></i></button>
-                        <div id="search-suggestions" class="dropdown-menu show" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; max-height: 300px; overflow-y: auto;"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-2 d-flex flex-column" style="max-height: calc(100vh - 150px); overflow-y: auto;">
-                <!-- Cart Items -->
-                <div id="cart-items" style="width: 100%; max-width: 100%; max-height: 540px; overflow-y: auto; margin-bottom: 12px; background: #f8f9fa; border-radius: 6px; padding: 8px;">
-                    <div class="table-responsive" style="width: 100%;">
-                        <table class="table table-sm mb-0 w-100" style="font-size: 0.75rem;">
-                            <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
-                                <tr style="border-bottom: 2px solid #dee2e6;">
-                                        <th class="py-2" style="font-weight: 600; color: #495057; width: 70%;">ITEM</th>
-                                        <th class="py-2 text-center" style="font-weight: 600; color: #495057; width: 15%;">QTY</th>
-                                        <th class="py-2 text-end" style="font-weight: 600; color: #495057; width: 15%;">TOTAL</th>
-                                    </tr>
-                            </thead>
-                            <tbody id="cart-tbody">
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted py-4" style="font-size: 0.85rem;">
-                                        <i class="fas fa-shopping-cart mb-2" style="font-size: 2rem; opacity: 0.3;"></i>
-                                        <div>Cart is empty</div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right: Summary + Payment -->
-    <div class="col-lg-4 order-lg-2">
-        <div class="card h-100">
-            <div class="card-header py-2">
-                <h6 class="mb-0">Summary</h6>
-            </div>
-            <div class="card-body p-2 d-flex flex-column" style="max-height: calc(100vh - 150px); overflow-y: auto;">
-                <!-- Cart Summary (Compact) -->
-                <div class="border-top pt-2" style="background: #f8f9fa; border-radius: 6px; padding: 12px 12px; margin-bottom: 12px;">
-                    <div class="row g-1 mb-2">
-                        <div class="col-6"><span style="font-size: 1.2rem; font-weight: 700;">Subtotal:</span></div>
-                        <div class="col-6 text-end"><span id="subtotal" style="font-size: 1.5rem; font-weight: 800;">₱0.00</span></div>
-                    </div>
-                    <div class="row g-1 mb-2 align-items-center">
-                        <div class="col-6">
-                            <span style="font-size: 1.2rem; font-weight: 700;">Discount:</span>
-                            <input type="number" id="discount" class="form-control form-control-sm d-inline" style="width: 60px; height: 28px; font-size: 0.9rem; padding: 2px 6px;" value="0" min="0" max="100">
-                            <span style="font-size: 1.2rem; font-weight: 700;">%</span>
-                        </div>
-                        <div class="col-6 text-end"><span id="discount-amount" style="font-size: 1.5rem; font-weight: 800; color: #198754;">-₱0.00</span></div>
-                    </div>
-                    <div class="row g-1 mb-3" style="border-bottom: 1px solid #dee2e6; padding-bottom: 10px;">
-                        <div class="col-6"><span style="font-size: 1.2rem; font-weight: 700;">Tax (12%):</span></div>
-                        <div class="col-6 text-end"><span id="tax" style="font-size: 1.5rem; font-weight: 800;">₱0.00</span></div>
-                    </div>
-                    <div class="row g-1 align-items-center">
-                        <div class="col-6"><strong style="font-size: 1.8rem; font-weight: 800; color: #212529;">TOTAL:</strong></div>
-                        <div class="col-6 text-end"><strong id="total" style="font-size: 2.0rem; font-weight: 900; color: #dc3545;">₱0.00</strong></div>
-                    </div>
-                </div>
-
-                <!-- Payment Details -->
-                <div style="background: #fff; border: 1px solid #dee2e6; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
-                    <div class="row g-2 mb-2">
-                        <div class="col-6">
-                            <label style="font-size: 0.75rem; font-weight: 600; color: #495057; margin-bottom: 4px; display: block;">Payment Method:</label>
-                            <select id="payment-method" class="form-select form-select-sm" style="font-size: 0.8rem;">
-                                <option value="cash">Cash</option>
-                                <option value="gcash">GCash</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label style="font-size: 0.75rem; font-weight: 600; color: #495057; margin-bottom: 4px; display: block;">Amount Received:</label>
-                            <input type="number" id="amount-received" class="form-control form-control-sm" step="0.01" min="0" placeholder="0.00" style="font-size: 0.8rem;">
-                        </div>
-                    </div>
-                    
-                    <!-- Quick Payment Amount Buttons -->
-                    <div class="payment-buttons mb-2">
-                        <small class="d-block mb-1" style="font-size: 0.7rem; color: #6c757d;">Quick Amount:</small>
-                        <div class="row g-1 mb-1">
-                            <div class="col-4"><button class="btn btn-outline-primary btn-sm w-100 quick-amount" data-amount="20" style="font-size: 0.7rem; padding: 4px;">₱20</button></div>
-                            <div class="col-4"><button class="btn btn-outline-primary btn-sm w-100 quick-amount" data-amount="50" style="font-size: 0.7rem; padding: 4px;">₱50</button></div>
-                            <div class="col-4"><button class="btn btn-outline-primary btn-sm w-100 quick-amount" data-amount="100" style="font-size: 0.7rem; padding: 4px;">���100</button></div>
-                        </div>
-                        <div class="row g-1 mb-1">
-                            <div class="col-4"><button class="btn btn-outline-primary btn-sm w-100 quick-amount" data-amount="200" style="font-size: 0.7rem; padding: 4px;">₱200</button></div>
-                            <div class="col-4"><button class="btn btn-outline-primary btn-sm w-100 quick-amount" data-amount="500" style="font-size: 0.7rem; padding: 4px;">₱500</button></div>
-                            <div class="col-4"><button class="btn btn-outline-primary btn-sm w-100 quick-amount" data-amount="1000" style="font-size: 0.7rem; padding: 4px;">₱1000</button></div>
-                        </div>
-                        <div class="row g-1">
-                            <div class="col-6"><button class="btn btn-outline-success btn-sm w-100" id="exact-amount-btn" style="font-size: 0.7rem; padding: 4px;">Exact Amount</button></div>
-                            <div class="col-6"><button class="btn btn-outline-danger btn-sm w-100" id="clear-amount-btn" style="font-size: 0.7rem; padding: 4px;">Clear</button></div>
-                        </div>
-                    </div>
-                    
-                    <!-- Change Display -->
-                    <div id="change-display" class="alert alert-success py-1 px-2 mb-2" style="display: none; font-size: 0.8rem;">
-                        <div class="d-flex justify-content-between">
-                            <strong>Change:</strong>
-                            <strong id="change-amount">₱0.00</strong>
-                        </div>
-                    </div>
-
-                    <!-- Hardware Controls -->
-                    <div class="d-flex gap-2 mb-2">
-                        <button type="button" id="configure-printer-btn" class="btn btn-outline-secondary btn-sm">Configure Printer</button>
-                        <button type="button" id="print-receipt-btn" class="btn btn-outline-primary btn-sm">Print Receipt</button>
-                    </div>
-                </div>
-                
-                <button id="complete-sale" class="btn btn-success w-100" style="font-weight: 600; padding: 10px; font-size: 0.95rem;" disabled>
-                    <i class="fas fa-check-circle me-1"></i> Complete Sale
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Receipt Modal -->
-<div class="modal fade" id="receiptModal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="receiptModalLabel">
-                    <i class="fas fa-check-circle me-2"></i>Receipt printed successfully!
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="receiptContent" style="font-family: 'Courier New', monospace; background: #fff;">
-                <!-- Receipt content will be dynamically generated here -->
-            </div>
-            <div class="modal-footer d-flex align-items-center">
-                <div class="me-auto d-flex align-items-center">
-                    <label for="receipt-width-select" class="form-label mb-0 me-2" style="font-size:0.85rem;">Paper:</label>
-                    <select id="receipt-width-select" class="form-select form-select-sm" style="display:inline-block; width:auto;">
-                        <option value="80">80 mm</option>
-                        <option value="58">58 mm</option>
+    <!-- Product Grid Section -->
+    <div class="col-lg-8">
+        <div class="content-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Products</h5>
+                <div class="d-flex gap-2">
+                    <input type="text" id="productSearch" class="form-control form-control-sm" placeholder="Search products..." style="width: 200px;">
+                    <select id="categoryFilter" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="">All Categories</option>
+                        <?php foreach ($categories as $category): ?>
+                            <option value="<?php echo htmlspecialchars($category); ?>"><?php echo htmlspecialchars($category); ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="printReceiptOnly()">
-                    <i class="fas fa-print me-1"></i>Print Receipt
-                </button>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- GCash QR Code Modal -->
-<div class="modal fade" id="gcashQRModal" tabindex="-1" aria-labelledby="gcashQRModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="gcashQRModalLabel">
-                    <i class="fas fa-qrcode me-2"></i>Scan GCash QR Code
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center" id="gcashQRContent">
-                <p class="text-muted mb-3">Scan the QR code below to pay with GCash</p>
-                <div id="qrCodeImage">
-                    <!-- QR Code will be loaded here -->
+            <div class="card-body">
+                <div class="product-grid row" id="productGrid">
+                    <?php foreach ($products as $product): ?>
+                        <div class="col-xl-3 col-lg-4 col-md-6 mb-3 product-item" 
+                             data-category="<?php echo htmlspecialchars($product['category_name'] ?? 'Uncategorized'); ?>"
+                             data-name="<?php echo strtolower($product['name']); ?>">
+                            <div class="card product-card h-100" onclick="addToCart(<?php echo $product['id']; ?>, '<?php echo addslashes($product['name']); ?>', <?php echo $product['price']; ?>, <?php echo $product['stock_quantity']; ?>)">
+                                <div class="card-body text-center p-3">
+                                    <i class="fas fa-box fa-2x text-primary mb-2"></i>
+                                    <h6 class="card-title mb-1"><?php echo htmlspecialchars($product['name']); ?></h6>
+                                    <p class="text-success fw-bold mb-1"><?php echo formatCurrency($product['price']); ?></p>
+                                    <small class="text-muted">Stock: <?php echo $product['stock_quantity']; ?></small>
+                                    <?php if ($product['stock_quantity'] <= 10): ?>
+                                        <div class="badge bg-warning text-dark">Low Stock</div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
         </div>
     </div>
-</div>
 
-<!-- Mobile Scanner Notification Modal -->
-<div class="modal fade" id="scannerNotificationModal" tabindex="-1" aria-labelledby="scannerNotificationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h6 class="modal-title" id="scannerNotificationModalLabel">
-                    <i class="fas fa-mobile-alt me-2"></i>Product Added
-                </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center" id="scannerNotificationContent">
-                <!-- Notification content will be dynamically generated here -->
-            </div>
-        </div>
-    </div>
-</div>
-<?php
-// Request the layout to include hardware scripts after Bootstrap is loaded
-$include_hardware_js = true;
-?>
-
-<!-- Floating hardware config button (visible fallback) -->
-<style>
-    #open-printer-config-fab {
-        position: fixed;
-        right: 18px;
-        bottom: 90px;
-        z-index: 2000;
-        border-radius: 50%;
-        width: 48px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #0d6efd;
-        color: #fff;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border: none;
-    }
-    @media (min-width: 992px) {
-        /* hide FAB on wide screens where configure button should be visible */
-        #open-printer-config-fab { display: none; }
-    }
-</style>
-<button id="open-printer-config-fab" title="Printer settings"><i class="fas fa-print"></i></button>
-<script>
-document.getElementById('open-printer-config-fab').addEventListener('click', function(){
-    try {
-        if (typeof window.openPrinterConfig === 'function') {
-            window.openPrinterConfig();
-            return;
-        }
-    } catch (e) { /* ignore */ }
-    var el = document.getElementById('printerConfigModal');
-    if (el && typeof bootstrap !== 'undefined' && bootstrap && typeof bootstrap.Modal === 'function') {
-        var m = new bootstrap.Modal(el);
-        m.show();
-    } else if (el) {
-        // minimal fallback
-        el.classList.add('show');
-        el.style.display = 'block';
-        const backdrop = document.createElement('div'); backdrop.className = 'modal-backdrop fade show'; document.body.appendChild(backdrop);
-    } else {
-        alert('Printer configuration not available on this page.');
-    }
-});
-</script>
-
-<!-- Static Printer Configuration Modal (always present) -->
-<div class="modal fade" id="printerConfigModal" tabindex="-1" aria-labelledby="printerConfigModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="printerConfigModalLabel"><i class="fas fa-print me-2"></i>Printer Configuration</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Select a printer for this workstation. QZ Tray is recommended for USB/ESC-POS printers.</p>
-                <div class="mb-3">
-                    <label class="form-label">Available Printers</label>
-                    <select id="printer-select" class="form-select"></select>
+    <!-- Cart Section -->
+    <div class="col-lg-4">
+        <div class="cart-section p-3">
+            <h5 class="mb-3">
+                <i class="fas fa-shopping-cart me-2"></i>Shopping Cart
+            </h5>
+            
+            <!-- Cart Items -->
+            <div class="cart-items" id="cartItems">
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-cart-plus fa-2x mb-2"></i>
+                    <p>Click products to add to cart</p>
                 </div>
-                <div class="form-text">If QZ Tray is not running, start it on the workstation and refresh this dialog.</div>
             </div>
-            <div class="modal-footer">
-                <button type="button" id="test-print-btn" class="btn btn-outline-primary">Test Print</button>
-                <button type="button" id="save-printer-btn" class="btn btn-primary" data-bs-dismiss="modal">Save</button>
+
+            <!-- Customer Info -->
+            <div class="customer-info mt-3">
+                <div class="row g-2">
+                    <div class="col-12">
+                        <label class="form-label small">Customer Name (Optional)</label>
+                        <input type="text" id="customerName" class="form-control form-control-sm" placeholder="Enter customer name">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Totals Section -->
+            <div class="total-section">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <span id="subtotal">₱0.00</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tax (12%):</span>
+                    <span id="tax">₱0.00</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-3">
+                    <strong>Total:</strong>
+                    <strong id="total" class="text-success">₱0.00</strong>
+                </div>
+
+                <!-- Payment Section -->
+                <div class="payment-section">
+                    <label class="form-label small">Amount Received</label>
+                    <input type="number" id="amountReceived" class="form-control mb-2" placeholder="0.00" step="0.01">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Change:</span>
+                        <span id="change" class="text-info">₱0.00</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success btn-custom" onclick="processPayment()" id="paymentBtn" disabled>
+                        <i class="fas fa-credit-card me-2"></i>Process Payment
+                    </button>
+                    <button class="btn btn-outline-danger btn-custom" onclick="clearCart()">
+                        <i class="fas fa-trash me-2"></i>Clear Cart
+                    </button>
+                </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Receipt Template (Hidden) -->
+<div class="receipt-print" id="receiptTemplate">
+    <div style="text-align: center; margin-bottom: 10px;">
+        <strong style="font-size: 16px;">POINTSHIFT POS</strong><br>
+        <small>Point of Sale System</small><br>
+        <small>Tel: (123) 456-7890</small><br>
+        <small>Email: info@jovespharmacy.com</small>
+    </div>
+    
+    <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 5px 0; margin: 10px 0;">
+        <div>Date: <span id="receiptDate"></span></div>
+        <div>Time: <span id="receiptTime"></span></div>
+        <div>Cashier: <?php echo htmlspecialchars($_SESSION['first_name'] . ' ' . $_SESSION['last_name']); ?></div>
+        <div>Customer: <span id="receiptCustomer"></span></div>
+        <div>Receipt #: <span id="receiptNumber"></span></div>
+    </div>
+    
+    <div id="receiptItems" style="margin: 10px 0;">
+        <!-- Items will be inserted here -->
+    </div>
+    
+    <div style="border-top: 1px dashed #000; padding-top: 5px; margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between;">
+            <span>Subtotal:</span>
+            <span id="receiptSubtotal"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+            <span>Tax (12%):</span>
+            <span id="receiptTax"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 14px;">
+            <span>TOTAL:</span>
+            <span id="receiptTotal"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+            <span>Cash:</span>
+            <span id="receiptCash"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+            <span>Change:</span>
+            <span id="receiptChange"></span>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 15px; font-size: 10px;">
+        <div>Thank you for your business!</div>
+        <div>Please come again!</div>
+        <div style="margin-top: 10px;">*** CUSTOMER COPY ***</div>
     </div>
 </div>
 
 <script>
 let cart = [];
-let discountPercent = 0;
+let cartTotal = 0;
 
-// Listen for cross-tab messages from mobile scanner or other windows
-(function() {
-    function handleIncomingMessage(msg) {
-        const currentUserId = <?php echo json_encode($_SESSION['user_id'] ?? '0'); ?>;
-        console.debug('handleIncomingMessage received', msg);
-        try {
-            if (!msg || !msg.action) return;
-
-            // Dedupe by msgId to avoid double-processing when both BroadcastChannel and storage fire
-            if (!window._pos_processed_msg_ids) window._pos_processed_msg_ids = new Set();
-            if (msg.msgId) {
-                if (window._pos_processed_msg_ids.has(msg.msgId)) {
-                    console.debug('handleIncomingMessage: duplicate msgId ignored', msg.msgId);
-                    return;
-                }
-                window._pos_processed_msg_ids.add(msg.msgId);
-                // Keep the set small (remove after some time)
-                setTimeout(() => { try { window._pos_processed_msg_ids.delete(msg.msgId); } catch(e){} }, 1000 * 60 * 5);
-            }
-
-            // Ensure the message is for the current user
-            if (msg.userId && msg.userId != currentUserId) {
-                console.debug('handleIncomingMessage: message for another user ignored', msg.userId);
-                return;
-            }
-
-            if (msg.action === 'add_to_cart' && msg.product) {
-                const p = msg.product;
-                // Additional short-window dedupe: ignore same product adds within 800ms
-                try {
-                    if (!window._pos_recent_adds) window._pos_recent_adds = new Map();
-                    const candidateKey = ((p.id ?? p.product_id ?? p.sku ?? p.barcode) + '');
-                    const now = Date.now();
-                    const last = window._pos_recent_adds.get(candidateKey) || 0;
-                    if (now - last < 800) {
-                        console.debug('handleIncomingMessage: recent duplicate ignored for', candidateKey);
-                        return;
-                    }
-                    window._pos_recent_adds.set(candidateKey, now);
-                    // cleanup map entries older than 30s periodically
-                    setTimeout(() => {
-                        try {
-                            for (const [k, t] of window._pos_recent_adds.entries()) {
-                                if (Date.now() - t > 30000) window._pos_recent_adds.delete(k);
-                            }
-                        } catch (e) {}
-                    }, 5000);
-                } catch (e) { console.warn('recent_adds dedupe failed', e); }
-                // Determine a numeric id when possible, otherwise keep string id
-                const candidate = (p.id ?? p.product_id ?? p.sku ?? p.barcode);
-                const numeric = Number(candidate);
-                const resolvedId = (!isNaN(numeric) && candidate !== '' && candidate !== null) ? numeric : candidate;
-
-                const productObj = {
-                    id: resolvedId,
-                    name: p.name || p.product_name || p.title || ('Product ' + (p.id || '')),
-                    price: parseFloat(p.price || 0),
-                    quantity: 1,
-                    stock_quantity: parseInt(p.stock_quantity || 0),
-                    barcode: p.barcode || p.sku || ''
-                };
-
-                console.debug('handleIncomingMessage: adding to cart', productObj);
-                // Add to cart and show notification modal
-                addToCart(productObj);
-                showScannerNotificationModal(productObj);
-            }
-        } catch (e) { console.error('Incoming add_to_cart failed', e); }
-    }
-
-    if (typeof BroadcastChannel !== 'undefined') {
-        try {
-            const userId = <?php echo json_encode($_SESSION['user_id'] ?? '0'); ?>;
-            const bc = new BroadcastChannel(`pos_channel_${userId}`);
-            bc.onmessage = function(ev) { handleIncomingMessage(ev.data); };
-        } catch (e) { console.warn('BroadcastChannel init failed', e); }
-    }
-
-    // Fallback: listen for localStorage changes
-    window.addEventListener('storage', function(e) {
-        const userId = <?php echo json_encode($_SESSION['user_id'] ?? '0'); ?>;
-        if (!e.key) return;
-        if (e.key === `pos_message_${userId}`) {
-            try {
-                const data = JSON.parse(e.newValue || e.oldValue || '{}');
-                handleIncomingMessage(data);
-            } catch (err) { console.error('pos_message parse failed', err); }
-        }
-    });
-    
-    // Poll server queue for messages (cross-browser support)
-    async function pollServerMessages() {
-        try {
-            const res = await fetch('<?php echo rtrim(SITE_URL, "/"); ?>/ajax/fetch_pos_messages.php?user_id=<?php echo urlencode($_SESSION['user_id'] ?? '0'); ?>');
-            const data = await res.json();
-            if (data && data.success && Array.isArray(data.messages) && data.messages.length) {
-                data.messages.forEach(m => {
-                    try {
-                        // Each message contains { id, msgId, product }
-                        handleIncomingMessage({ action: 'add_to_cart', msgId: m.msgId, product: m.product, userId: m.userId });
-                    } catch (e) { console.error('pollServerMessages handling failed', e); }
-                });
-            }
-        } catch (e) {
-            // ignore transient errors
-            // console.warn('pollServerMessages failed', e);
-        }
-    }
-    // Start polling every 2 seconds
-    setInterval(pollServerMessages, 2000);
-})();
-
-function addToCart(product, ev = null) {
-    // Determine quantity: if an event from a product card/button is provided, try to read an input value; otherwise default to 1
-    let quantity = 1;
-    try {
-        const quantityInput = ev && ev.target ? ev.target.closest('.product-card')?.querySelector('input[type="number"]') : null;
-        if (quantityInput) {
-            const q = parseInt(quantityInput.value);
-            if (!isNaN(q) && q > 0) quantity = q;
-        }
-    } catch (e) {
-        // ignore and use default quantity
-    }
-
-    // Convert id to a number when possible to keep types consistent
-        const prodId = (typeof product.id === 'string' && /^\d+$/.test(product.id)) ? parseInt(product.id, 10) : product.id;
-
+// Add product to cart
+function addToCart(id, name, price, stock) {
     // Check if product already in cart
-    const existingItem = cart.find(item => item.id === prodId);
-
+    const existingItem = cart.find(item => item.id === id);
+    
     if (existingItem) {
-        existingItem.quantity += quantity;
+        if (existingItem.quantity < stock) {
+            existingItem.quantity += 1;
+        } else {
+            alert('Insufficient stock!');
+            return;
+        }
     } else {
         cart.push({
-            id: prodId,
-            name: product.name,
-            price: parseFloat(product.price),
-            quantity: quantity,
-            stock: product.stock_quantity
+            id: id,
+            name: name,
+            price: price,
+            quantity: 1,
+            stock: stock
         });
     }
-
+    
     updateCartDisplay();
 }
 
-function removeFromCart(productId) {
-    cart = cart.filter(item => item.id !== productId);
+// Remove item from cart
+function removeFromCart(id) {
+    cart = cart.filter(item => item.id !== id);
     updateCartDisplay();
 }
 
-function updateCartQuantity(productId, newQuantity) {
-    const item = cart.find(item => item.id === productId);
+// Update quantity
+function updateQuantity(id, newQuantity) {
+    const item = cart.find(item => item.id === id);
     if (item) {
         if (newQuantity <= 0) {
-            removeFromCart(productId);
-        } else {
+            removeFromCart(id);
+        } else if (newQuantity <= item.stock) {
             item.quantity = newQuantity;
             updateCartDisplay();
+        } else {
+            alert('Insufficient stock!');
         }
     }
 }
 
+// Update cart display
 function updateCartDisplay() {
-    const cartTbody = document.getElementById('cart-tbody');
+    const cartContainer = document.getElementById('cartItems');
     
     if (cart.length === 0) {
-        cartTbody.innerHTML = `<tr>
-            <td colspan="3" class="text-center text-muted py-4" style="font-size: 0.85rem;">
-                <i class="fas fa-shopping-cart mb-2" style="font-size: 2rem; opacity: 0.3;"></i>
-                <div>Cart is empty</div>
-            </td>
-        </tr>`;
-        document.getElementById('complete-sale').disabled = true;
-    } else {
-        let html = '';
-        cart.forEach(item => {
-            const total = item.price * item.quantity;
-            html += `
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                    <td class="py-2">
-                        <div style="font-weight: 600; font-size: 0.8rem; color: #212529; margin-bottom: 2px;">${item.name}</div>
-                        <div style="font-size: 0.7rem; color: #6c757d;">₱${item.price.toFixed(2)} each</div>
-                    </td>
-                    <td class="py-2 text-center">
-                        <div class="d-flex align-items-center justify-content-center gap-1">
-                            <button class="btn btn-sm btn-outline-secondary" onclick="updateCartQuantity(${item.id}, ${item.quantity - 1})" style="padding: 2px 6px; font-size: 0.7rem; line-height: 1;">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <span style="font-weight: 600; min-width: 25px; text-align: center; font-size: 0.85rem;">${item.quantity}</span>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="updateCartQuantity(${item.id}, ${item.quantity + 1})" style="padding: 2px 6px; font-size: 0.7rem; line-height: 1;">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${item.id})" style="padding: 2px 6px; font-size: 0.7rem; line-height: 1;">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                    <td class="py-2 text-end">
-                        <div style="font-weight: 700; font-size: 0.9rem; color: #0d6efd;">₱${total.toFixed(2)}</div>
-                    </td>
-                </tr>
-            `;
-        });
-        cartTbody.innerHTML = html;
-        document.getElementById('complete-sale').disabled = false;
-    }
-    
-    updateTotals();
-}
-
-function updateTotals() {
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const discount = (subtotal * discountPercent) / 100;
-    const discountedSubtotal = subtotal - discount;
-    const tax = discountedSubtotal * 0.12;
-    const total = discountedSubtotal + tax;
-    
-    document.getElementById('subtotal').textContent = '₱' + subtotal.toFixed(2);
-    document.getElementById('discount-amount').textContent = '-₱' + discount.toFixed(2);
-    document.getElementById('tax').textContent = '₱' + tax.toFixed(2);
-    document.getElementById('total').textContent = '₱' + total.toFixed(2);
-}
-
-// Discount input handler
-
-// If a barcode parameter is present in the URL (e.g., from mobile scanner), fetch the product and add to cart automatically
-(function autoAddBarcodeFromURL(){
-    try {
-        const params = new URLSearchParams(window.location.search);
-        const barcode = params.get('barcode');
-        if (!barcode) return;
-
-        // Fetch product by barcode (reusing ajax/get_product.php)
-        (async function(){
-            try {
-                const res = await fetch('<?php echo rtrim(SITE_URL, "/"); ?>/ajax/get_product.php', {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({barcode: barcode})
-                });
-                const data = await res.json();
-                if (data && data.success && data.product) {
-                    // Map returned product shape to what addToCart expects
-                    const p = data.product;
-                    const productObj = {
-                        id: p.id,
-                        name: p.name || p.product_name || p.title || ('Product ' + p.id),
-                        price: parseFloat(p.price || 0),
-                        stock_quantity: parseInt(p.stock_quantity || 0),
-                        barcode: p.barcode || p.sku || ''
-                    };
-
-                    // Add to cart and show a small toast
-                    addToCart(productObj);
-                    if (typeof showLocalToast === 'function') showLocalToast('Added', productObj.name + ' added to cart', 'success');
-
-                    // Remove barcode param from URL to avoid duplicate adds on reload
-                    params.delete('barcode');
-                    const newUrl = window.location.pathname + (params.toString() ? ('?' + params.toString()) : '');
-                    window.history.replaceState({}, document.title, newUrl);
-                }
-            } catch (e) {
-                console.error('Auto-add barcode failed', e);
-            }
-        })();
-    } catch (e) {
-        console.error('autoAddBarcodeFromURL init failed', e);
-    }
-})();
-document.getElementById('discount').addEventListener('input', function() {
-    discountPercent = parseFloat(this.value) || 0;
-    updateTotals();
-    calculateChange();
-});
-
-// Amount received input handler
-document.getElementById('amount-received').addEventListener('input', function() {
-    calculateChange();
-});
-
-// Quick amount buttons
-document.querySelectorAll('.quick-amount').forEach(button => {
-    button.addEventListener('click', function() {
-        const amount = parseFloat(this.dataset.amount);
-        document.getElementById('amount-received').value = amount.toFixed(2);
-        calculateChange();
-    });
-});
-
-// Exact amount button
-document.getElementById('exact-amount-btn').addEventListener('click', function() {
-    const total = parseFloat(document.getElementById('total').textContent.replace('₱', '')) || 0;
-    document.getElementById('amount-received').value = total.toFixed(2);
-    calculateChange();
-});
-
-// Clear amount button
-document.getElementById('clear-amount-btn').addEventListener('click', function() {
-    document.getElementById('amount-received').value = '';
-    document.getElementById('change-display').style.display = 'none';
-});
-
-// Calculate change
-function calculateChange() {
-    const total = parseFloat(document.getElementById('total').textContent.replace('₱', '')) || 0;
-    const amountReceived = parseFloat(document.getElementById('amount-received').value) || 0;
-    const change = amountReceived - total;
-    
-    const changeDisplay = document.getElementById('change-display');
-    const changeAmount = document.getElementById('change-amount');
-    
-    if (amountReceived > 0) {
-        if (change >= 0) {
-            changeDisplay.className = 'alert alert-success py-1 px-2 mb-2';
-            changeAmount.textContent = '₱' + change.toFixed(2);
-            changeDisplay.style.display = 'block';
-        } else {
-            changeDisplay.className = 'alert alert-danger py-1 px-2 mb-2';
-            changeAmount.textContent = 'Short: ₱' + Math.abs(change).toFixed(2);
-            changeDisplay.style.display = 'block';
-        }
-    } else {
-        changeDisplay.style.display = 'none';
-    }
-}
-
-// Complete sale
-document.getElementById('complete-sale').addEventListener('click', function() {
-    const amountReceived = parseFloat(document.getElementById('amount-received').value);
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const discount = (subtotal * discountPercent) / 100;
-    const discountedSubtotal = subtotal - discount;
-    const tax = discountedSubtotal * 0.12;
-    const total = discountedSubtotal + tax;
-    
-    if (!amountReceived || amountReceived < total) {
-        alert(`Amount received (₱${amountReceived ? amountReceived.toFixed(2) : '0.00'}) is less than total amount (₱${total.toFixed(2)})!`);
+        cartContainer.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-cart-plus fa-2x mb-2"></i>
+                <p>Click products to add to cart</p>
+            </div>
+        `;
+        updateTotals();
         return;
     }
     
-    const paymentMethod = document.getElementById('payment-method').value;
-    
-    // Send order to server
-    fetch('pos.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `action=complete_sale&items=${encodeURIComponent(JSON.stringify(cart))}&amount_received=${amountReceived}&payment_method=${paymentMethod}&discount_percent=${discountPercent}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Generate and show receipt
-            generateReceipt(data);
-            
-            // Clear cart
-            cart = [];
-            updateCartDisplay();
-            document.getElementById('amount-received').value = '';
-            document.getElementById('discount').value = '0';
-            discountPercent = 0;
-            document.getElementById('change-display').style.display = 'none';
-            
-            // Show receipt modal
-            const receiptModal = new bootstrap.Modal(document.getElementById('receiptModal'));
-            receiptModal.show();
-        } else {
-            alert('Error completing sale: ' + data.message);
-        }
-    });
-});
-
-// Generate Receipt HTML
-function generateReceipt(orderData) {
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-    
-    const subtotal = orderData.subtotal || 0;
-    const total = orderData.total || 0;
-    const amountPaid = parseFloat(document.getElementById('amount-received').value) || 0;
-    const change = orderData.change || (amountPaid - total);
-    const paymentMethod = document.getElementById('payment-method').value.toUpperCase();
-    
-    let itemsHTML = '';
+    let cartHTML = '';
     cart.forEach(item => {
         const itemTotal = item.price * item.quantity;
-        itemsHTML += `
-            <tr>
-                <td style="padding: 4px 0;">${item.name}</td>
-                <td style="padding: 4px 0; text-align: center;">${item.quantity} x ₱${item.price.toFixed(2)}</td>
-                <td style="padding: 4px 0; text-align: right;">₱${itemTotal.toFixed(2)}</td>
-            </tr>
-        `;
-    });
-    
-    const receiptHTML = `
-        <div style="max-width: 400px; margin: 0 auto; padding: 20px; text-align: center;">
-            <h4 style="margin: 0 0 5px 0;">PointShift</h4>
-            <p style="margin: 0; font-size: 11px; line-height: 1.4;"><br>
-            
-            </p>
-            
-            <hr style="border-top: 1px solid #000; margin: 15px 0;">
-            
-            <div style="text-align: left; font-size: 12px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                    <span>Sale #: <strong>${orderData.order_number || 'N/A'}</strong></span>
-                    <span>${dateStr} ${timeStr}</span>
-                </div>
-                <div style="margin-bottom: 3px;">
-                    <span>Cashier: <strong><?php echo htmlspecialchars($_SESSION['first_name'] ?? 'Staff') . ' ' . htmlspecialchars($_SESSION['last_name'] ?? 'Member'); ?></strong></span>
-                </div>
-                <div>
-                    <span>Customer: <strong>Walk-in</strong></span>
-                </div>
-            </div>
-    
-    <!-- Printer Configuration Modal removed from receipt template (now a static modal below) -->
-            
-            <table style="width: 100%; font-size: 12px; margin-bottom: 15px;">
-                <tbody>
-                    ${itemsHTML}
-                </tbody>
-            </table>
-            
-            <hr style="border-top: 1px dashed #000; margin: 15px 0;">
-            
-            <div style="text-align: left; font-size: 13px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                    <span>Subtotal:</span>
-                    <span>₱${subtotal.toFixed(2)}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #000;">
-                    <strong style="font-size: 15px;">TOTAL:</strong>
-                    <strong style="font-size: 15px;">₱${total.toFixed(2)}</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                    <span>Payment (${paymentMethod}):</span>
-                    <span>₱${amountPaid.toFixed(2)}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Change:</span>
-                    <span>₱${change.toFixed(2)}</span>
-                </div>
-            </div>
-            
-            <hr style="border-top: 1px solid #000; margin: 20px 0 15px 0;">
-            
-            <p style="margin: 5px 0; font-size: 11px;">Thank you for your business!</p>
-            <p style="margin: 5px 0; font-size: 11px;">Please come again!</p>
-        </div>
-    `;
-    
-    document.getElementById('receiptContent').innerHTML = receiptHTML;
-}
-
-// Print only the receipt content in a new window to avoid printing the whole POS page
-function printReceiptOnly() {
-    try {
-        const receiptContent = document.getElementById('receiptContent');
-        if (!receiptContent) {
-            window.print();
-            return;
-        }
-
-        const w = window.open('', '_blank', 'width=400,height=700');
-        // Determine receipt width (mm) from selector or stored preference. Default to 80mm.
-        let receiptWidthMM = 80;
-        try {
-            const sel = document.getElementById('receipt-width-select');
-            const stored = localStorage.getItem('receiptWidthMM');
-            if (sel && sel.value) {
-                receiptWidthMM = parseInt(sel.value, 10) || receiptWidthMM;
-            } else if (stored) {
-                receiptWidthMM = parseInt(stored, 10) || receiptWidthMM;
-            }
-        } catch (e) { /* ignore and use default */ }
-        const styles = `
-            <style>
-                @page { size: ${receiptWidthMM}mm auto; margin: 4mm; }
-                html, body { margin: 0; padding: 0; }
-                body { font-family: 'Courier New', monospace; -webkit-print-color-adjust: exact; }
-                .receipt-wrapper { width: ${receiptWidthMM}mm; max-width: 100%; margin: 0 auto; padding: 4mm 6mm; box-sizing: border-box; }
-                .receipt-wrapper img { max-width: 100%; height: auto; }
-                /* Tighter defaults for receipt fonts */
-                .receipt-wrapper h4 { margin: 0 0 4px 0; font-size: 14px; }
-                .receipt-wrapper p { margin: 0; font-size: 11px; line-height: 1.2; }
-                .receipt-wrapper table { width: 100%; border-collapse: collapse; font-size: 11px; }
-                .receipt-wrapper td { padding: 2px 0; vertical-align: top; }
-                @media print {
-                    body { margin: 0; }
-                    @page { size: ${receiptWidthMM}mm auto; margin: 4mm; }
-                }
-            </style>
-        `;
-
-        // Wrap receipt content in a narrow receipt wrapper so it prints at correct width
-        w.document.write(`<!doctype html><html><head><title>Receipt</title>${styles}</head><body><div class="receipt-wrapper">${receiptContent.innerHTML}</div></body></html>`);
-        w.document.close();
-        w.focus();
-        // Give browser a moment to render before printing
-        setTimeout(() => {
-            try { w.print(); } catch (e) { console.error('Print failed', e); }
-            // Close after printing (some browsers block close if not triggered by user); keep it short
-            setTimeout(() => { try { w.close(); } catch (e) {} }, 500);
-        }, 300);
-    } catch (e) {
-        console.error('printReceiptOnly failed', e);
-        window.print();
-    }
-}
-
-// Initialize receipt width selector and persist user preference
-(function() {
-    try {
-        const sel = document.getElementById('receipt-width-select');
-        if (!sel) return;
-        const stored = localStorage.getItem('receiptWidthMM');
-        if (stored) sel.value = stored;
-        sel.addEventListener('change', function() {
-            try { localStorage.setItem('receiptWidthMM', this.value); } catch (e) {}
-        });
-    } catch (e) {}
-})();
-
-// Payment Method Change - Show GCash QR if selected
-document.getElementById('payment-method').addEventListener('change', function() {
-    if (this.value === 'gcash') {
-        // Fetch and show GCash QR code
-        fetch('pos.php?action=get_gcash_qr')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.qr_code_path) {
-                    document.getElementById('qrCodeImage').innerHTML = `
-                        <img src="../${data.qr_code_path}" alt="GCash QR Code" class="img-fluid" style="max-width: 300px; border: 2px solid #0d6efd; border-radius: 8px;">
-                    `;
-                    const gcashModal = new bootstrap.Modal(document.getElementById('gcashQRModal'));
-                    gcashModal.show();
-                } else {
-                    document.getElementById('qrCodeImage').innerHTML = `
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            No GCash QR code available. Please contact administrator.
+        cartHTML += `
+            <div class="card mb-2">
+                <div class="card-body p-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${item.name}</h6>
+                            <small class="text-muted">${formatCurrency(item.price)} each</small>
                         </div>
-                    `;
-                    const gcashModal = new bootstrap.Modal(document.getElementById('gcashQRModal'));
-                    gcashModal.show();
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching GCash QR:', error);
-                alert('Error loading GCash QR code');
-            });
-    }
-});
-
-// Search functionality
-document.getElementById('product-search').addEventListener('keyup', function(e) {
-    if (e.key === 'Enter') {
-        window.location.href = `pos.php?search=${encodeURIComponent(this.value)}`;
-    }
-});
-
-// Live search with suggestions
-(function(){
-    const input = document.getElementById('product-search');
-    const menu = document.getElementById('search-suggestions');
-    if (!input || !menu) return;
-    let debounceTimer = null;
-
-    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
-
-    function render(items){
-        if (!Array.isArray(items) || items.length === 0){
-            menu.innerHTML = '<div class="dropdown-item text-muted small">No products found</div>';
-            menu.style.display = 'block';
-            return;
-        }
-        menu.innerHTML = items.map(p => {
-            const name = escapeHtml(p.name);
-            const price = (Number(p.price)||0).toFixed(2);
-            const stock = Number(p.stock_quantity)||0;
-            return `<div class="dropdown-item d-flex align-items-center justify-content-between" data-id="${p.id}" data-name="${name}" data-price="${p.price}" data-stock="${stock}">
-                        <div class="me-2" style="min-width:0;">
-                            <div class="fw-semibold text-truncate" style="max-width:260px;">${name}</div>
-                            <div class="small text-muted">₱${price} · Stock: ${stock}</div>
+                        <button class="btn btn-outline-danger btn-sm" onclick="removeFromCart(${item.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div class="input-group input-group-sm" style="width: 100px;">
+                            <button class="btn btn-outline-secondary" onclick="updateQuantity(${item.id}, ${item.quantity - 1})">-</button>
+                            <input type="number" class="form-control text-center" value="${item.quantity}" min="1" max="${item.stock}" onchange="updateQuantity(${item.id}, parseInt(this.value))">
+                            <button class="btn btn-outline-secondary" onclick="updateQuantity(${item.id}, ${item.quantity + 1})">+</button>
                         </div>
-                        <button type="button" class="btn btn-sm btn-success add-from-search">Add</button>
-                    </div>`;
-        }).join('');
-        menu.style.display = 'block';
-    }
-
-    async function doSearch(q){
-        if (!q || !q.trim()) { menu.style.display='none'; return; }
-        try {
-            const res = await fetch(`pos.php?action=search_products&q=${encodeURIComponent(q)}`);
-            const data = await res.json();
-            render((data && data.success && Array.isArray(data.results)) ? data.results : []);
-        } catch(e){ menu.innerHTML = '<div class="dropdown-item text-danger small">Search error</div>'; menu.style.display='block'; }
-    }
-
-    input.addEventListener('input', function(){
-        clearTimeout(debounceTimer);
-        const q = this.value;
-        debounceTimer = setTimeout(() => doSearch(q), 300);
-    });
-
-    input.addEventListener('focus', function(){ if (this.value) doSearch(this.value); });
-    input.addEventListener('blur', function(){ setTimeout(()=>{ if (!menu.matches(':hover')) menu.style.display='none'; }, 200); });
-    menu.addEventListener('mouseleave', function(){ setTimeout(()=>{ if (!input.matches(':focus')) menu.style.display='none'; }, 200); });
-
-    menu.addEventListener('click', function(e){
-        const btn = e.target.closest('.add-from-search');
-        if (!btn) return;
-        const row = btn.closest('.dropdown-item');
-        const product = {
-            id: (function(v){ return (/^\d+$/.test(String(v))? parseInt(v,10): v); })(row.getAttribute('data-id')),
-            name: row.getAttribute('data-name') || '',
-            price: parseFloat(row.getAttribute('data-price') || '0'),
-            stock_quantity: parseInt(row.getAttribute('data-stock') || '0', 10)
-        };
-        addToCart(product);
-        menu.style.display = 'none';
-        input.value = '';
-    });
-})();
-
-// Mobile scanner helpers for cashier POS
-function openMobileScannerFromPOS() {
-    const scheme = 'pointshift://scan';
-    const fallback = '<?php echo SITE_URL; ?>/mobile-app/';
-    // Attempt to open native app; fall back to mobile-app README
-    window.location.href = scheme;
-    setTimeout(() => { window.open(fallback, '_blank'); }, 800);
-}
-
-function showMobileQRForPOS() {
-    const link = 'pointshift://scan';
-    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(link);
-    // create modal if not exists
-    if (!document.getElementById('mobileScannerQRModal')) {
-        const modalHtml = `
-            <div class="modal fade" id="mobileScannerQRModal" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Open Mobile Scanner</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body text-center">
-                            <p class="small text-muted">Scan this QR with your mobile app to open the scanner:</p>
-                            <img src="${qrUrl}" alt="QR" style="max-width:220px;">
-                            <p class="small text-muted mt-2">Or open: <code>pointshift://scan</code></p>
-                        </div>
+                        <strong class="text-success">${formatCurrency(itemTotal)}</strong>
                     </div>
                 </div>
-            </div>`;
-        const div = document.createElement('div'); div.innerHTML = modalHtml; document.body.appendChild(div.firstElementChild);
-    }
-    const modalEl = document.getElementById('mobileScannerQRModal');
-    const bs = new bootstrap.Modal(modalEl);
-    bs.show();
+            </div>
+        `;
+    });
+    
+    cartContainer.innerHTML = cartHTML;
+    updateTotals();
 }
 
-document.getElementById('openMobileScannerBtn')?.addEventListener('click', function(e){ e.preventDefault(); openMobileScannerFromPOS(); });
-document.getElementById('showMobileQRBtn')?.addEventListener('click', function(e){ e.preventDefault(); showMobileQRForPOS(); });
+// Update totals
+function updateTotals() {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const tax = subtotal * 0.12;
+    const total = subtotal + tax;
+    
+    document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+    document.getElementById('tax').textContent = formatCurrency(tax);
+    document.getElementById('total').textContent = formatCurrency(total);
+    
+    cartTotal = total;
+    
+    // Update change calculation
+    const amountReceived = parseFloat(document.getElementById('amountReceived').value) || 0;
+    const change = amountReceived - total;
+    document.getElementById('change').textContent = formatCurrency(Math.max(0, change));
+    
+    // Enable/disable payment button
+    document.getElementById('paymentBtn').disabled = cart.length === 0 || amountReceived < total;
+}
 
-// Function to show scanner notification modal
-function showScannerNotificationModal(productObj) {
-    const modalContent = document.getElementById('scannerNotificationContent');
-    modalContent.innerHTML = `
-        <div class="text-center">
-            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-            <h5 class="mb-2">${productObj.name}</h5>
-            <p class="text-muted mb-0">Added to cart successfully!</p>
+// Process payment
+async function processPayment() {
+    if (cart.length === 0) {
+        alert('Cart is empty!');
+        return;
+    }
+    
+    const amountReceived = parseFloat(document.getElementById('amountReceived').value) || 0;
+    if (amountReceived < cartTotal) {
+        alert('Insufficient payment amount!');
+        return;
+    }
+    
+    const customerName = document.getElementById('customerName').value || 'Walk-in Customer';
+    
+    try {
+        // Create order data
+        const orderData = {
+            customer_name: customerName,
+            items: cart,
+            subtotal: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+            tax: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) * 0.12,
+            total: cartTotal,
+            amount_received: amountReceived,
+            change: amountReceived - cartTotal
+        };
+        
+        // Process the order
+        const response = await processOrder(orderData);
+        
+        if (response.success) {
+            // Show notifications if any
+            if (window.POSNotificationHandler) {
+                POSNotificationHandler.handleTransactionResponse(response);
+            }
+            
+            // Generate receipt
+            generateReceipt(orderData, response.order_id);
+            
+            // Print receipt
+            printReceipt();
+            
+            // Clear cart
+            clearCart();
+            
+            alert('Payment processed successfully!');
+        } else {
+            alert('Payment processing failed: ' + response.error);
+        }
+    } catch (error) {
+        alert('Payment processing failed: ' + error.message);
+    }
+}
+
+// Generate receipt
+function generateReceipt(orderData, orderId) {
+    const now = new Date();
+    const receiptNumber = 'POS' + now.getFullYear() + (now.getMonth() + 1).toString().padStart(2, '0') + now.getDate().toString().padStart(2, '0') + '-' + orderId;
+    
+    document.getElementById('receiptDate').textContent = now.toLocaleDateString();
+    document.getElementById('receiptTime').textContent = now.toLocaleTimeString();
+    document.getElementById('receiptCustomer').textContent = orderData.customer_name;
+    document.getElementById('receiptNumber').textContent = receiptNumber;
+    
+    // Generate items list
+    let itemsHTML = '';
+    orderData.items.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        itemsHTML += `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                <div style="flex: 1;">
+                    <div style="font-weight: bold;">${item.name}</div>
+                    <div style="font-size: 10px;">${item.quantity} x ${formatCurrency(item.price)}</div>
+                </div>
+                <div style="text-align: right;">
+                    ${formatCurrency(itemTotal)}
+                </div>
+            </div>
+        `;
+    });
+    
+    document.getElementById('receiptItems').innerHTML = itemsHTML;
+    document.getElementById('receiptSubtotal').textContent = formatCurrency(orderData.subtotal);
+    document.getElementById('receiptTax').textContent = formatCurrency(orderData.tax);
+    document.getElementById('receiptTotal').textContent = formatCurrency(orderData.total);
+    document.getElementById('receiptCash').textContent = formatCurrency(orderData.amount_received);
+    document.getElementById('receiptChange').textContent = formatCurrency(orderData.change);
+}
+
+// Print receipt
+function printReceipt() {
+    // Show receipt for printing
+    document.getElementById('receiptTemplate').style.display = 'block';
+    
+    // Print
+    window.print();
+    
+    // Hide receipt after printing
+    setTimeout(() => {
+        document.getElementById('receiptTemplate').style.display = 'none';
+    }, 1000);
+}
+
+// Simulate order processing (replace with actual backend call)
+async function processOrder(orderData) {
+    try {
+        const response = await fetch('process_order.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderData)
+        });
+        
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+// Clear cart
+function clearCart() {
+    cart = [];
+    updateCartDisplay();
+    document.getElementById('customerName').value = '';
+    document.getElementById('amountReceived').value = '';
+}
+
+// Product search and filter
+document.getElementById('productSearch').addEventListener('input', filterProducts);
+document.getElementById('categoryFilter').addEventListener('change', filterProducts);
+document.getElementById('amountReceived').addEventListener('input', updateTotals);
+
+function filterProducts() {
+    const searchTerm = document.getElementById('productSearch').value.toLowerCase();
+    const selectedCategory = document.getElementById('categoryFilter').value;
+    const products = document.querySelectorAll('.product-item');
+    
+    products.forEach(product => {
+        const productName = product.dataset.name;
+        const productCategory = product.dataset.category;
+        
+        const matchesSearch = productName.includes(searchTerm);
+        const matchesCategory = !selectedCategory || productCategory === selectedCategory;
+        
+        product.style.display = matchesSearch && matchesCategory ? 'block' : 'none';
+    });
+}
+
+// Format currency helper
+function formatCurrency(amount) {
+    return '₱' + parseFloat(amount).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // F1 - Process Payment
+    if (e.key === 'F1') {
+        e.preventDefault();
+        if (!document.getElementById('paymentBtn').disabled) {
+            processPayment();
+        }
+    }
+    
+    // F2 - Clear Cart
+    if (e.key === 'F2') {
+        e.preventDefault();
+        clearCart();
+    }
+    
+    // F3 - Focus on search
+    if (e.key === 'F3') {
+        e.preventDefault();
+        document.getElementById('productSearch').focus();
+    }
+});
+    
+// If a barcode parameter is present in the URL, lookup the product and add to cart
+(function handleBarcodeParam(){
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('barcode');
+        if (!code) return;
+
+        // Call the global AJAX endpoint to get product details
+        (async function(){
+            try {
+                const res = await fetch('<?php echo dirname($_SERVER['SCRIPT_NAME']); ?>/../ajax/get_product.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ barcode: code })
+                });
+                const data = await res.json();
+                if (data.success && data.product) {
+                    // addToCart expects id, name, price, stock
+                    addToCart(parseInt(data.product.id), data.product.name.replace(/'/g, "\\'"), parseFloat(data.product.price), parseInt(data.product.stock_quantity || 0));
+                    // Show a brief toast notification that item was added
+                    if (typeof showLocalToast === 'function') {
+                        showLocalToast('Added to cart', data.product.name, 'success');
+                    }
+                    // Remove barcode param from URL to avoid duplicate adds on refresh
+                    const u = new URL(window.location.href);
+                    u.searchParams.delete('barcode');
+                    window.history.replaceState({}, document.title, u.toString());
+                } else {
+                    alert('Product not found for barcode: ' + code);
+                }
+            } catch (e) {
+                console.error('Error fetching product by barcode', e);
+            }
+        })();
+    } catch (e) { console.warn('Barcode param handler failed', e); }
+})();
+</script>
+
+<!-- Toast container and helper for in-page notifications -->
+<div id="localToasts" class="position-fixed top-0 end-0 p-3" style="z-index:1200; margin-top:60px;"></div>
+<script>
+// Make sure bootstrap is available
+function showLocalToast(title, message, type = 'info') {
+    const container = document.getElementById('localToasts');
+    if (!container) return;
+
+    const toastEl = document.createElement('div');
+    toastEl.className = 'toast align-items-center text-bg-light border-0 mb-2';
+    toastEl.setAttribute('role', 'alert');
+    toastEl.setAttribute('aria-live', 'assertive');
+    toastEl.setAttribute('aria-atomic', 'true');
+    toastEl.style.minWidth = '260px';
+
+    toastEl.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <strong>${escapeHtml(title)}</strong><br>
+                <span class="small">${escapeHtml(message)}</span>
+            </div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     `;
-    const modal = new bootstrap.Modal(document.getElementById('scannerNotificationModal'));
-    modal.show();
-    // Auto-hide after 2 seconds
-    setTimeout(() => {
-        modal.hide();
-    }, 2000);
+
+    container.appendChild(toastEl);
+    const bToast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    bToast.show();
+    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"]/g, function(m) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; });
 }
 </script>
 
-<style>
-.product-card:hover {
-    background-color: #f8f9fa !important;
-    border-color: #007bff !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-}
-
-.btn-complete-sale {
-    background-color: #28a745;
-    border-color: #28a745;
-    color: white;
-    font-weight: 600;
-    padding: 8px 16px;
-}
-
-.btn-complete-sale:hover {
-    background-color: #218838;
-    border-color: #1e7e34;
-}
-
-.btn-complete-sale:disabled {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    opacity: 0.5;
-}
-
-.nav-pills .nav-link.active {
-    background-color: #007bff;
-    color: white;
-}
-
-.nav-pills .nav-link {
-    background-color: #f8f9fa;
-    color: #6c757d;
-    margin: 0 2px;
-    border-radius: 4px;
-}
-
-.nav-pills .nav-link:hover {
-    background-color: #e9ecef;
-    color: #495057;
-}
-
-.card {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.payment-buttons .btn {
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    color: #495057;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.payment-buttons .btn:hover {
-    background-color: #e9ecef;
-    border-color: #adb5bd;
-    color: #212529;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.payment-buttons .btn:active {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: white;
-}
-
-@media (max-width: 991px) {
-    .col-lg-5, .col-lg-7 {
-        margin-bottom: 15px;
-    }
-    
-    .card-body {
-        max-height: none !important;
-    }
-    
-    #cart-items {
-        max-height: 240px !important; /* increased for better visibility on tablets/phones */
-    }
-}
-
-@media (max-width: 576px) {
-    .col-md-6 {
-        flex: 0 0 50%;
-        max-width: 50%;
-    }
-    
-    .product-card h6 {
-        font-size: 0.7rem !important;
-        line-height: 1.1 !important;
-    }
-    
-    .product-card .text-success {
-        font-size: 0.75rem !important;
-    }
-}
-</style>
-
 <?php
 $content = ob_get_clean();
-include __DIR__ . '/views/layout.php';
+$title = 'Point of Sale';
+include 'views/layout.php';
 ?>
