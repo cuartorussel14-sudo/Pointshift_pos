@@ -1,0 +1,163 @@
+<?php
+require_once 'config.php';
+
+// Public endpoint: request an account. Will create a user in 'pending' state and send verification email to the provided address.
+
+// Ensure verification columns exist (adds columns automatically when possible)
+function ensureVerificationColumns($conn) {
+    // Use ALTER TABLE ADD COLUMN IF NOT EXISTS when available (MySQL 8+). Fall back to checking information_schema.
+    try {
+        $alterSql = "ALTER TABLE users \
+            ADD COLUMN IF NOT EXISTS email_verified TINYINT(1) DEFAULT 0, \
+            ADD COLUMN IF NOT EXISTS email_verification_code VARCHAR(128) DEFAULT NULL, \
+            ADD COLUMN IF NOT EXISTS email_verification_expires_at DATETIME DEFAULT NULL, \
+            ADD COLUMN IF NOT EXISTS email_verified_at DATETIME DEFAULT NULL";
+        $conn->query($alterSql);
+    } catch (Exception $e) {
+        // Fallback: check information_schema and add columns individually if missing
+        $cols = [
+            'email_verified' => "TINYINT(1) DEFAULT 0",
+            'email_verification_code' => "VARCHAR(128) DEFAULT NULL",
+            'email_verification_expires_at' => "DATETIME DEFAULT NULL",
+            'email_verified_at' => "DATETIME DEFAULT NULL"
+        ];
+
+        foreach ($cols as $col => $type) {
+            $check = $conn->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = ? LIMIT 1");
+            $dbName = DB_NAME;
+            $check->bind_param('ss', $dbName, $col);
+            $check->execute();
+            $res = $check->get_result();
+            if (!$res || $res->num_rows === 0) {
+                $conn->query("ALTER TABLE users ADD COLUMN {$col} {$type}");
+            }
+        }
+    }
+}
+
+// Try to ensure the schema supports account verification
+if (isset($conn)) {
+    ensureVerificationColumns($conn);
+}
+
+// Ensure the users.status enum supports 'pending' values so requests can be stored
+if (isset($conn)) {
+    try {
+        // Attempt to modify the status column to include 'pending' if it's not already present
+        $conn->query("ALTER TABLE users MODIFY COLUMN status ENUM('active','inactive','pending') DEFAULT 'active'");
+    } catch (Exception $e) {
+        // If the server/version doesn't support MODIFY in this way or the column already contains values that block the change,
+        // fall back to checking information_schema to decide whether to run a more careful migration.
+        error_log('Could not modify users.status to add pending: ' . $e->getMessage());
+    }
+}
+
+if (isLoggedIn()) {
+    redirect('dashboard.php');
+    exit;
+}
+
+$message = '';
+$message_type = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username'] ?? '');
+    $first_name = trim($_POST['first_name'] ?? '');
+    $last_name = trim($_POST['last_name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+
+    if ($username === '') {
+        $message = 'Please provide a username.';
+        $message_type = 'danger';
+    } elseif ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message = 'Please provide a valid email address.';
+        $message_type = 'danger';
+    } else {
+        // Check if email already exists
+        $stmt = $conn->prepare("SELECT id, email_verified, status FROM users WHERE email = ? LIMIT 1");
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+
+        if ($row) {
+            if ($row['email_verified']) {
+                $message = 'An account with this email already exists and is verified. Please log in or contact the administrator.';
+                $message_type = 'warning';
+            } else {
+                // Resend verification to existing user
+                $user_id = $row['id'];
+                // Existing request: keep the account pending and notify admins. Do not send verification email here.
+                $stmt = $conn->prepare("UPDATE users SET status = 'pending' WHERE id = ?");
+                $stmt->bind_param('i', $user_id);
+                $stmt->execute();
+
+                $message = 'Your account request is pending approval. An administrator will send a verification code when ready.';
+                $message_type = 'info';
+            }
+        } else {
+            // Check if username is already taken
+            $check_username = $conn->prepare("SELECT COUNT(*) as cnt FROM users WHERE username = ?");
+            $check_username->bind_param('s', $username);
+            $check_username->execute();
+            $cnt = $check_username->get_result()->fetch_assoc()['cnt'];
+            if ($cnt > 0) {
+                $message = 'Username already exists. Please choose a different username.';
+                $message_type = 'danger';
+            } else {
+                // Create new user with provided username and autogenerated password, status pending
+                // Generate random password and hash it (user will verify and admin can reset or user requests reset)
+                $random_password = bin2hex(random_bytes(4));
+                $hashed_password = password_hash($random_password, PASSWORD_DEFAULT);
+
+                $role = 'staff';
+                $status = 'pending';
+                // Do not generate or send verification code at request time. Admin will generate and send the code when approving.
+                $email_verified = 0;
+
+                $stmt = $conn->prepare("INSERT INTO users (username, email, password, role, first_name, last_name, status, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param('sssssssi', $username, $email, $hashed_password, $role, $first_name, $last_name, $status, $email_verified);
+
+                if ($stmt->execute()) {
+                    $new_user_id = $conn->insert_id;
+
+                    // Extra safeguard: ensure the newly created request is explicitly marked as pending
+                    try {
+                        $mark = $conn->prepare("UPDATE users SET status = 'pending', email_verified = 0 WHERE id = ?");
+                        $mark->bind_param('i', $new_user_id);
+                        $mark->execute();
+                    } catch (Exception $_e) {
+                        // ignore - this is only a safeguard
+                    }
+
+                    // Don't send verification yet. Inform the requester that the account is pending admin approval.
+                    $message = 'Account request received. Your request is pending administrator approval. An administrator will send a verification code when ready.';
+                    $message_type = 'success';
+                    // Create an in-app notification for administrators about the new account request
+                    try {
+                        require_once __DIR__ . '/classes/Notification.php';
+                        require_once __DIR__ . '/classes/Database.php';
+                        $dbp = Database::getInstance()->getConnection();
+                        $notifMsg = "New account request: " . ($first_name ?: $username) . " ({$email}) - pending approval.";
+                        Notification::create($dbp, $notifMsg, 'info', null);
+                    } catch (Throwable $e) {
+                        // Don't block account creation on notification errors
+                        error_log('Failed to create account-request notification: ' . $e->getMessage());
+                    }
+                } else {
+                    $message = 'Error creating account request: ' . $conn->error;
+                    $message_type = 'danger';
+                }
+            }
+        }
+    }
+
+    // After processing, show the login page with message; else the request-account form will show messages
+    $_SESSION['request_account_message'] = $message;
+    $_SESSION['request_account_message_type'] = $message_type;
+    redirect('login.php');
+    exit;
+}
+
+// If not POST, redirect to login
+redirect('login.php');
+exit;
